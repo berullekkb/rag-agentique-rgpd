@@ -40,18 +40,39 @@ fait mieux qu'un RAG avancé linéaire.
 <!-- RESULTATS:START -->
 LLM du RAG : `qwen2.5:7b` ; juge RAGAS : `qwen2.5:7b` (Ollama, local, température 0). Les notes RAGAS sont des moyennes sur les questions notées pour les deux systèmes.
 
-**Jeu `gold_set`** (10 questions) — **résultats intermédiaires** : 2/10 questions notées pour les deux systèmes, calcul en cours.
+**Jeu `gold_set`** (10 questions).
 
 | | RAG avancé (baseline) | RAG agentique | Écart |
 |---|---|---|---|
-| Faithfulness | 0,950 | 0,944 | −0,006 |
-| Answer relevancy | 0,811 | 0,752 | −0,059 |
-| Context precision | 0,500 | 0,819 | +0,319 |
-| Context recall | 0,250 | 1,000 | +0,750 |
-| **Moyenne des 4 métriques** | **0,628** | **0,879** | **+0,251** |
+| Faithfulness | 0,692 | 0,603 | −0,088 |
+| Answer relevancy | 0,674 | 0,684 | +0,010 |
+| Context precision | 0,783 | 0,806 | +0,022 |
+| Context recall | 0,717 | 0,983 | +0,267 |
+| **Moyenne des 4 métriques** | **0,716** | **0,769** | **+0,053** |
 | Articles attendus retrouvés | 0,52 | 0,77 | +0,25 |
 | Temps de réponse moyen (s) | 160 | 524 | — |
 <!-- RESULTATS:END -->
+
+![Comparaison RAGAS](evaluation/results/comparaison_gold_set.png)
+
+**Lecture des résultats**
+
+- **L'approche agentique gagne en moyenne** : 0,769 contre 0,716 sur les quatre notes
+  RAGAS (+0,053), et 77 % des articles attendus retrouvés contre 52 %.
+- **Le gain vient de la recherche.** Le *context recall* passe de 0,72 à 0,98 : grâce à la
+  décomposition de la question, à la recherche hybride et à la boucle CRAG, l'agent ne rate
+  presque plus d'article. Exemples : « principes du traitement » (article 5 trouvé, recall
+  0 → 1) et « droits de la personne » (articles 15 à 17 trouvés, recall 0 → 0,83).
+- **La fidélité baisse (−0,09)**, et ce n'est pas un problème de recherche. Sur les questions 4
+  et 9, la réponse principale est juste et appuyée par le bon article (33/34, 83), mais le
+  gabarit en 5 sections ajoute des « points de vigilance » et des « recommandations » génériques
+  que le juge ne retrouve pas dans le contexte. Le Critic, joué par le même modèle 7B, les a
+  laissés passer (note 8 à 10, « fidèle »). La réflexion n'est donc efficace qu'avec un
+  critique plus exigeant que le rédacteur.
+- **Pistes** : un critique plus gros que le rédacteur (14B), ou un gabarit agentique limité à
+  la réponse directe, aux articles et à l'explication, ce qui devrait faire remonter la
+  fidélité sans toucher au gain de recherche.
+- **Coût** : environ 3,3 fois plus de temps par réponse (524 s contre 160 s sur processeur).
 
 ## Pourquoi un RAG agentique ? Diagnostic de la baseline
 

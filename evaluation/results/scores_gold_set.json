@@ -75,6 +75,54 @@
    "answer_relevancy": 0.7456540371328545,
    "llm_context_precision_with_reference": 0.6388888888675925,
    "context_recall": 1.0
+  },
+  "Quels sont les droits de la personne concernée ?": {
+   "faithfulness": 0.6,
+   "answer_relevancy": 0.5766491594363687,
+   "llm_context_precision_with_reference": 0.3333333333,
+   "context_recall": 0.8333333333333334
+  },
+  "Quelles sont les obligations en cas de violation de données personnelles ?": {
+   "faithfulness": 0.18181818181818182,
+   "answer_relevancy": 0.7929536494708181,
+   "llm_context_precision_with_reference": 0.5833333333041666,
+   "context_recall": 1.0
+  },
+  "Quand une analyse d'impact relative à la protection des données est-elle obligatoire ?": {
+   "faithfulness": 0.6,
+   "answer_relevancy": 0.8174152051769278,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 1.0
+  },
+  "Quelles sont les bases légales possibles d'un traitement ?": {
+   "faithfulness": 0.7272727272727273,
+   "answer_relevancy": 0.3864386342396012,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 1.0
+  },
+  "Quand la désignation d'un délégué à la protection des données est-elle obligatoire ?": {
+   "faithfulness": 0.5,
+   "answer_relevancy": 0.8075981543943254,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 1.0
+  },
+  "À quelles conditions peut-on transférer des données hors de l'Union européenne ?": {
+   "faithfulness": 0.6,
+   "answer_relevancy": 0.8895577512756998,
+   "llm_context_precision_with_reference": 0.49999999995,
+   "context_recall": 1.0
+  },
+  "Quel est le montant maximal des amendes administratives prévues par le RGPD ?": {
+   "faithfulness": 0.16666666666666666,
+   "answer_relevancy": 0.6890154418885038,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 1.0
+  },
+  "Quelle est la différence entre responsable de traitement et sous-traitant ?": {
+   "faithfulness": 0.7692307692307693,
+   "answer_relevancy": 0.37289024036149826,
+   "llm_context_precision_with_reference": 0.99999999995,
+   "context_recall": 1.0
   }
  }
 }
