@@ -1,4 +1,5 @@
 name: Publier le site
+# Site statique docs/ publié sur https://berullekkb.github.io/rag-agentique-rgpd/
 
 on:
   push:
