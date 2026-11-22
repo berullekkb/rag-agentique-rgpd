@@ -18,3 +18,4 @@ node_modules/
 # Évaluation : fichiers temporaires
 *.tmp
 evaluation/results/run_log.txt
+.pytest_cache/

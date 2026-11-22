@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG agentique · RGPD — RAG avancé vs multi-agents LangGraph</title>
+<meta name="description" content="Comparaison d'un RAG avancé et d'un RAG agentique multi-agents (LangGraph) sur le texte du RGPD, avec des LLM locaux (Ollama) et une évaluation RAGAS.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230d2350'/><text x='16' y='22' font-size='15' text-anchor='middle' fill='%23f2b705' font-family='Arial' font-weight='700'>§</text></svg>">
+</head>
+<body>
+<header class="topnav">
+  <div class="brand"><span class="stars">★★★</span> RAG agentique · RGPD</div>
+  <nav>
+    <a href="#agents">Graphe des agents</a>
+    <a href="#comparateur">Comparateur</a>
+    <a href="#carte">Carte du RGPD</a>
+    <a href="#benchmark">Benchmark RAGAS</a>
+    <a href="#methode">Méthode</a>
+  </nav>
+  <a class="gh" href="https://github.com/berullekkb/rag-agentique-rgpd">GitHub ↗</a>
+</header>
+
+<div class="hero" id="top">
+  <div class="hero-inner">
+    <div>
+      <h1>Du RAG avancé au <em>RAG agentique</em> multi-agents</h1>
+      <p class="lead">Un assistant qui répond aux questions sur le RGPD en s'appuyant uniquement sur le
+        texte du règlement. On compare un pipeline RAG classique et un graphe de 7 agents
+        LangGraph (planification, correction CRAG, réflexion), avec le même LLM local et le
+        même juge RAGAS.</p>
+      <div class="chips">
+        <span class="chip">99 articles du RGPD</span>
+        <span class="chip">LangGraph</span>
+        <span class="chip">Ollama · 100 % local</span>
+        <span class="chip">ChromaDB + BM25</span>
+        <span class="chip">RAGAS</span>
+      </div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </div>
+</div>
+
+<!-- ── 1. graphe des agents ─────────────────────────────────── -->
+<section class="block" id="agents">
+  <h2>Le graphe des agents</h2>
+  <p class="sub">Chaque nœud est un agent avec un rôle, un prompt et une sortie structurée. Les flèches en
+    pointillés sont les boucles : reformulation (CRAG) et révision (Reflexion), bornées pour garantir la
+    terminaison. Cliquez sur un agent pour voir son rôle, ou rejouez le parcours réel d'une question.</p>
+  <div class="controls">
+    <label for="replayQ">Rejouer la question</label>
+    <select id="replayQ" class="q"></select>
+    <button class="btn" id="replayBtn">▶ Rejouer</button>
+  </div>
+  <div class="grid-graph">
+    <div class="card">
+      <svg id="graph" class="chart" viewBox="0 0 640 470" role="img" aria-label="Graphe des agents du RAG agentique"></svg>
+      <div class="pipeline-base">
+        <div class="muted small" style="margin-bottom:6px">Pour comparaison — le RAG avancé (baseline) est un pipeline linéaire, sans retour en arrière :</div>
+        <svg id="pipeline" class="chart" viewBox="0 0 640 64" role="img" aria-label="Pipeline linéaire du RAG avancé"></svg>
+      </div>
+    </div>
+    <div class="card agent-info" id="agentInfo"></div>
+  </div>
+</section>
+
+<!-- ── 2. comparateur ───────────────────────────────────────── -->
+<section class="block" id="comparateur">
+  <h2>Comparateur question par question</h2>
+  <p class="sub">Les deux systèmes reçoivent la même question. On voit les articles qu'ils ont donnés au LLM
+    (<span style="color:var(--good);font-weight:600">✓</span> = article attendu par la réponse de référence),
+    leur réponse et leurs quatre scores RAGAS.</p>
+  <div class="controls">
+    <div class="seg" id="goldSeg"></div>
+    <select id="cmpQ" class="q"></select>
+  </div>
+  <div class="reference" id="cmpRef"></div>
+  <div class="grid2">
+    <div class="card" id="cmpBase"></div>
+    <div class="card" id="cmpAgent"></div>
+  </div>
+</section>
+
+<!-- ── 3. carte ─────────────────────────────────────────────── -->
+<section class="block" id="carte">
+  <h2>Carte du RGPD</h2>
+  <p class="sub">Les 99 articles placés selon la ressemblance de leurs embeddings (ceux qu'utilise la
+    recherche vectorielle, projetés en 2D par t-SNE). Pour la question choisie : les articles récupérés par
+    le RAG avancé, par le RAG agentique, et les articles attendus. Survolez un point pour lire l'article.</p>
+  <div class="controls">
+    <select id="mapQ" class="q"></select>
+  </div>
+  <div class="legend">
+    <span><i class="sw-base"></i>RAG avancé</span>
+    <span><i class="sw-agent"></i>RAG agentique</span>
+    <span><i style="border:1.5px dashed #0b0b0b;border-radius:50%"></i>Article attendu</span>
+  </div>
+  <div class="card"><svg id="map" class="chart" viewBox="0 0 1100 600" role="img" aria-label="Carte t-SNE des articles du RGPD"></svg></div>
+</section>
+
+<!-- ── 4. benchmark ─────────────────────────────────────────── -->
+<section class="block" id="benchmark">
+  <h2>Benchmark RAGAS</h2>
+  <p class="sub" id="benchSub"></p>
+  <div class="controls"><div class="seg" id="goldSeg2"></div></div>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin:0 0 4px;font-size:16px">Scores moyens par métrique</h3>
+      <div class="legend"><span><i class="sw-base"></i>RAG avancé</span><span><i class="sw-agent"></i>RAG agentique</span></div>
+      <svg id="barChart" class="chart" viewBox="0 0 560 330" role="img" aria-label="Scores RAGAS moyens"></svg>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 4px;font-size:16px">Question par question</h3>
+      <div class="controls" style="margin:6px 0 0"><select id="dumbMetric"></select></div>
+      <div class="legend"><span><i class="sw-base"></i>RAG avancé</span><span><i class="sw-agent"></i>RAG agentique</span></div>
+      <svg id="dumbbell" class="chart" viewBox="0 0 560 330" role="img" aria-label="Scores RAGAS par question"></svg>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h3 style="margin:0 0 8px;font-size:16px">Tableau des résultats</h3>
+    <table class="tbl" id="benchTable"></table>
+  </div>
+</section>
+
+<!-- ── 5. méthode ───────────────────────────────────────────── -->
+<section class="block method" id="methode">
+  <h2>Méthode</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">Protocole équitable</h3>
+      <ol>
+        <li><b>Même corpus, même index</b> : RGPD (UE 2016/679), 99 articles, chunks de 300 caractères dans ChromaDB, embeddings <code>paraphrase-multilingual-MiniLM-L12-v2</code>.</li>
+        <li><b>Même LLM</b> pour les deux systèmes : <code id="mLLM">qwen2.5:7b</code> via Ollama, en local.</li>
+        <li><b>Même premier jet</b> : le rédacteur agentique utilise le même prompt RGPD que la baseline ; l'écart vient de l'orchestration.</li>
+        <li><b>Même juge</b> : <code id="mJudge">qwen2.5:14b</code>, température 0, plus gros que le modèle évalué.</li>
+        <li><b>Quatre métriques RAGAS</b> : faithfulness, answer relevancy, context precision, context recall.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Limites</h3>
+      <ul>
+        <li>10 + 10 questions : les écarts sur une question isolée sont bruités ; on lit les moyennes et les tendances.</li>
+        <li>Le juge est un LLM local de 14 milliards de paramètres : moins fiable qu'un grand modèle commercial, mais identique pour les deux systèmes.</li>
+        <li>Les outils de l'agent de recherche (BM25 hybride, reranker multilingue) améliorent aussi la recherche en eux-mêmes ; ils font partie de sa boîte à outils.</li>
+        <li>Le RAG agentique est plus lent (6 à 9 appels au LLM par question contre 2).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Projet AI31 — Indexation et Recherche d'Information, UTC. Berulle Kamdem.
+  Code et données : <a href="https://github.com/berullekkb/rag-agentique-rgpd">github.com/berullekkb/rag-agentique-rgpd</a>.
+  Ce site est statique : il affiche les résultats exportés par <code>scripts/export_site_data.py</code>.
+</footer>
+
+<div class="tip" id="tip"></div>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,208 +1,169 @@
-# AI31_Projet_RAG — Système RAG sur le RGPD
+# RAG agentique · RGPD
 
-Projet réalisé dans le cadre de l'UV **LO17 / AI31 — Indexation et Recherche d'Information** à l'UTC (Printemps 2026).
+[![Publier le site](https://github.com/berullekkb/rag-agentique-rgpd/actions/workflows/pages.yml/badge.svg)](https://github.com/berullekkb/rag-agentique-rgpd/actions/workflows/pages.yml)
 
-## Description
+**Site interactif : [berullekkb.github.io/rag-agentique-rgpd](https://berullekkb.github.io/rag-agentique-rgpd/)**
+(graphe des agents rejouable, comparateur question par question, carte du RGPD, benchmark RAGAS).
 
-Système de **Retrieval Augmented Generation (RAG)** sur le corpus du **RGPD**. On pose une question en français, le système récupère les articles pertinents dans une base vectorielle, puis un LLM rédige une réponse structurée et **fondée uniquement sur les articles récupérés** (anti-hallucination).
+<table>
+  <tr>
+    <td width="50%"><a href="https://berullekkb.github.io/rag-agentique-rgpd/#agents"><img src="docs/images/site_agents.png" alt="Graphe des agents : planner, researcher, grader, rewriter, writer, critic, reviser, avec la trace réelle d'une question"></a></td>
+    <td width="50%"><a href="https://berullekkb.github.io/rag-agentique-rgpd/#comparateur"><img src="docs/images/site_comparateur.png" alt="Comparateur : réponses, articles récupérés et scores RAGAS des deux systèmes pour une même question"></a></td>
+  </tr>
+  <tr>
+    <td><b>Graphe des agents</b> : les 7 agents LangGraph, leurs boucles (CRAG, Reflexion) et le parcours réel d'une question rejoué étape par étape.</td>
+    <td><b>Comparateur</b> : pour une même question, les articles donnés au LLM (✓ = article attendu), la réponse et les 4 scores RAGAS de chaque système.</td>
+  </tr>
+  <tr>
+    <td><a href="https://berullekkb.github.io/rag-agentique-rgpd/#carte"><img src="docs/images/site_carte.png" alt="Carte du RGPD : les 99 articles projetés par t-SNE, avec les articles récupérés par chaque système"></a></td>
+    <td><a href="https://berullekkb.github.io/rag-agentique-rgpd/#benchmark"><img src="docs/images/site_benchmark.png" alt="Benchmark RAGAS : scores moyens par métrique et question par question"></a></td>
+  </tr>
+  <tr>
+    <td><b>Carte du RGPD</b> : les 99 articles placés selon leurs embeddings ; on voit où cherche chaque système et où se trouve la bonne réponse.</td>
+    <td><b>Benchmark RAGAS</b> : faithfulness, answer relevancy, context precision et context recall, en moyenne et question par question.</td>
+  </tr>
+</table>
 
-Deux architectures cohabitent et sont **comparées objectivement avec RAGAS** :
+Projet AI31 (Indexation et Recherche d'Information, UTC) : un assistant qui répond aux
+questions sur le **RGPD** (règlement UE 2016/679) en s'appuyant **uniquement** sur le
+texte du règlement, et la démonstration qu'une **orchestration agentique multi-agents**
+fait mieux qu'un RAG avancé linéaire.
 
-1. **RAG avancé** (baseline) : multi-query → parent/child → reranking → génération.
-2. **RAG agentique multi-agents** (LangGraph) : planner/routeur → researcher (recherche hybride + outils) → grader CRAG → rewriter → writer → critic/reviser (**Reflection / Reflexion**).
+- **Corpus** : texte officiel du RGPD (EUR-Lex), 11 chapitres, 99 articles.
+- **Deux systèmes** : un RAG avancé (multi-query, parent/child, reranking) et un RAG
+  agentique de 7 agents LangGraph (planification, correction CRAG, réflexion).
+- **100 % local** : LLM `qwen2.5:7b` et juge `qwen2.5:14b` via **Ollama**, aucune clé API.
+- **Évaluation** : RAGAS sur 2 jeux de 10 questions, même LLM et même juge pour les deux systèmes.
 
-Tout tourne **en local** avec des modèles **Ollama** (aucune clé API nécessaire). Détails : **[RAG_AGENTIQUE.md](RAG_AGENTIQUE.md)**.
+## Résultats
 
-Le projet est découpé en trois briques indépendantes :
+<!-- RESULTATS:START -->
+L'évaluation complète tourne en local (≈ 3 min par question pour la baseline, ≈ 10 min
+pour l'agentique et ≈ 15 min de notation par réponse avec le juge 14B sur CPU). Le
+tableau et les captures sont mis à jour à la fin du calcul.
+<!-- RESULTATS:END -->
 
-| Brique | Rôle | Techno |
-|---|---|---|
-| **`backend/`** | API REST qui orchestre le pipeline RAG (baseline + agentique) | FastAPI + LangChain + LangGraph + ChromaDB + Ollama |
-| **`rag-frontend/`** | Interface de chat | React 18 + Vite + Redux + Tailwind |
-| **`evaluation/`** | Mesure objective et comparative de la qualité du RAG | RAGAS (juge = LLM local Ollama) |
-| **`scripts_windows/`** | Installation des modèles, évaluation, publication | scripts `.bat` |
+## Pourquoi un RAG agentique ? Diagnostic de la baseline
 
-## Architecture du dépôt
-
-```
-AI31_Projet_RAG/
-├── .env                       # Configuration locale (modèles Ollama, clés optionnelles) — NON versionné
-├── RAG_AGENTIQUE.md           # Analyse, conception et évaluation du RAG agentique
-├── .gitignore
-├── README.md                  # Documentation du projet (ce fichier)
-├── requirements.txt
-│
-├── backend/                   # ── API FastAPI ──────────────────────────
-│   ├── run.py                 # Point d'entrée : uvicorn sur :8000
-│   ├── scripts/
-│   │   └── build_index.py     # (Re)construit l'index ChromaDB depuis le HTML
-│   ├── data/
-│   │   ├── L_2016119FR...html  # Texte officiel du RGPD (source)
-│   │   └── chroma_db/          # Index vectoriel persisté (généré)
-│   └── app/
-│       ├── main.py            # create_app() + lifespan (init au démarrage)
-│       ├── core/
-│       │   ├── config.py      # Settings (modèles, chemins, params retrieval)
-│       │   ├── container.py   # Injection de dépendances (singletons)
-│       │   └── logging.py
-│       ├── api/
-│       │   ├── query.py       # POST /query, GET /query/stream, POST /query/filter
-│       │   └── health.py      # GET /health, GET /ready
-│       ├── schemas/
-│       │   └── query.py       # Modèles Pydantic (Request/Response)
-│       └── services/
-│           ├── indexing.py    # HTML → documents parent/enfant
-│           ├── vectorstore.py # Embeddings HF + ChromaDB
-│           ├── llm.py         # Fabrique LLM : Ollama (défaut), Mistral, Gemini + juge RAGAS
-│           ├── retriever.py   # Multi-query + parent recovery + rerank
-│           ├── pipeline.py    # smart_rag (routeur) + full_rag ; mode="agentic" → graphe
-│           └── agentic/       # RAG agentique multi-agents (LangGraph)
-│               ├── graph.py   # graphe : planner, researcher, grader, rewriter, writer, critic, reviser
-│               ├── prompts.py # prompts + schémas Pydantic de chaque agent
-│               └── tools.py   # outils : recherche hybride BM25+dense (RRF), get_article, rerank
-│
-├── rag-frontend/              # ── Interface React ──────────────────────
-│   └── src/                   # (voir rag-frontend/README.md pour le détail)
-│
-├── evaluation/                # ── Évaluation RAGAS ─────────────────────
-│   ├── evaluation_ragas.py    # Script : charge le RAG, génère, score (baseline seule)
-│   ├── evaluation_comparative.py # Baseline vs agentique, même LLM, même juge (reprenable)
-│   ├── results/               # Comparaisons (md, png, csv) générées
-│   ├── gold_set.json          # Jeu de questions principal (8 conceptuelles + 2 pointues)
-│   ├── gold_set2.json         # Jeu de questions plus faciles (définitions)
-│   └── resultats_*.csv        # Scores par question (généré, un CSV par gold set)
-│
-└── venv/                      # Environnement virtuel (non versionné)
-```
-
-## Pipeline RAG (cœur du système)
+Le RAG avancé de départ (`backend/app/services/retriever.py`, `pipeline.py`) :
 
 ```
-        Texte RGPD (HTML)
-              │
-      indexing.py  ── parse → articles (parents) + petits chunks (enfants)
-              │
-     vectorstore.py ── embeddings multilingues → ChromaDB (persisté)
-              │
-  ┌───────────┴─────────── Question ──────────────────────┐
-  │                                                         │
-  retriever.py                                        pipeline.py
-  1. multi-query   : le LLM reformule la Q en 4 variantes     smart_rag() route :
-  2. recherche     : top-k chunks par variante              • « article N » → lookup direct (sans LLM)
-  3. parent recovery : on remonte aux articles complets      • titre de chapitre → lookup chapitre
-  4. rerank        : cross-encoder garde les 3 meilleurs     • sinon → full_rag (RAG sémantique)
-              │                                                         │
-              └─────────────► LLM (Ollama) + prompt RGPD structuré ◄────┘
-                                       │
-                          Réponse en 5 sections + sources + métriques
+question → multi-query (4 variantes) → top-6 chunks / variante → articles parents
+         → rerank cross-encoder (top-3) → prompt RGPD en 5 sections → réponse
 ```
 
-**Idée clé — parent/child retrieval** : on embarque de *petits* chunks (précis pour la recherche sémantique) mais on renvoie au LLM l'*article entier* (contexte complet). On combine précision de recherche et richesse du contexte.
+Les résultats question par question montrent cinq faiblesses :
 
-## Prérequis
+1. **Les titres d'articles ne sont pas indexés.** À « Quels sont les principes relatifs
+   au traitement… ? », la baseline renvoie les articles 6, 9 et 13 mais pas
+   l'**article 5**, dont c'est exactement le titre.
+2. **Reranker anglais** (`ms-marco-MiniLM-L-6-v2`) sur un texte juridique français.
+3. **Top-3 fixe** : les questions transversales (droits art. 15 à 21, transferts art.
+   44 à 49, DPO art. 37 à 39) demandent plus de 3 articles.
+4. **Gabarit en 5 sections** : « Points de vigilance » et « Recommandation » poussent le
+   LLM à ajouter des conseils absents du contexte, ce qui fait baisser la faithfulness.
+5. **Aucune boucle** : une mauvaise recherche ou une réponse infidèle n'est ni détectée
+   ni corrigée.
 
-- **Python 3.11 ou 3.12** recommandé (⚠️ Python 3.14 pose des soucis de compilation sur certaines dépendances — voir Notes)
-- **Node.js 18+** (testé avec v24)
-- **Ollama** : https://ollama.com/download, puis `ollama pull qwen2.5:7b` (RAG) et `ollama pull qwen2.5:14b` (juge RAGAS) — ou simplement `scripts_windows\1_installer.bat`
-- (Optionnel) une clé API Mistral pour utiliser le fournisseur cloud historique (`LLM_PROVIDER=mistral`)
+## Le RAG agentique
 
-## Installation & lancement
+```mermaid
+flowchart TD
+    Q([Question]) --> P[Planner / Router]
+    P -- hors sujet --> OT[Réponse hors périmètre] --> E([Réponse])
+    P -- RGPD --> R[Researcher<br/>BM25 + dense, RRF,<br/>get_article, rerank multilingue]
+    R --> G{Grader CRAG<br/>contexte suffisant ?}
+    G -- non --> RW[Rewriter] --> R
+    G -- oui --> W[Writer]
+    W --> C{Critic<br/>fidèle, pertinent ?}
+    C -- oui --> E
+    C -- non --> RV[Reviser<br/>recherche ciblée + réécriture] --> C
+```
 
-### 1. Configuration
+| Agent | Rôle | Technique | Métrique visée |
+|---|---|---|---|
+| Planner / Router | route la question, la décompose, propose des articles | query decomposition | recall |
+| Researcher | BM25 + vectoriel (fusion RRF), lecture d'un article, reranker multilingue | outils | recall, precision |
+| Grader | garde les articles utiles, dit s'il en manque | Corrective RAG (Yan et al., 2024) | precision |
+| Rewriter | reformule à partir de ce qui manque (1 boucle max) | boucle CRAG | recall |
+| Writer | premier jet, **même prompt que la baseline** | — | — |
+| Critic | affirmations non fondées, manques, digressions | Reflection, Self-RAG (Asai et al., 2023) | faithfulness, relevancy |
+| Reviser | recherche ciblée puis réécriture (2 révisions max) | Reflexion (Shinn et al., 2023) | faithfulness |
 
-Aucun réglage obligatoire : par défaut le RAG utilise Ollama en local. Pour changer de modèle, créer/compléter `.env` à la racine :
+Chaque agent produit une **sortie structurée** (schéma Pydantic converti en JSON Schema
+et imposé par Ollama). Si le modèle local renvoie un JSON invalide, l'agent réessaie
+puis applique un repli déterministe. Détails : [`RAG_AGENTIQUE.md`](RAG_AGENTIQUE.md).
+
+## Protocole d'évaluation
+
+1. **Même LLM** (`qwen2.5:7b`), même index ChromaDB, mêmes embeddings
+   (`paraphrase-multilingual-MiniLM-L12-v2`) pour les deux systèmes.
+2. **Même premier jet** : le Writer agentique utilise le prompt de la baseline ; l'écart
+   mesure l'orchestration.
+3. **Même juge** : `qwen2.5:14b`, température 0, plus gros que le modèle évalué.
+4. **4 métriques RAGAS** + une mesure objective sans LLM : la part des articles attendus
+   (cités par la réponse de référence) effectivement retrouvés.
+5. Script **reprenable** (`evaluation/evaluation_comparative.py`) : générations et notes
+   sont sauvegardées au fil de l'eau.
+
+## Organisation du dépôt
 
 ```
-LLM_PROVIDER=ollama
-LLM_MODEL=qwen2.5:7b
-JUDGE_MODEL=qwen2.5:14b
-# MISTRAL_API_KEY=...   (seulement si LLM_PROVIDER=mistral)
+rag-agentique-rgpd/
+├── backend/                    API FastAPI + pipelines RAG
+│   ├── app/services/retriever.py, pipeline.py   RAG avancé (baseline)
+│   ├── app/services/agentic/                    RAG agentique LangGraph
+│   │   ├── graph.py     graphe et agents
+│   │   ├── prompts.py   prompts + schémas de sortie
+│   │   └── tools.py     BM25 + dense (RRF), get_article, rerank
+│   ├── app/services/llm.py      Ollama (défaut), Mistral, Gemini
+│   └── data/                    texte du RGPD (HTML) + index ChromaDB (généré)
+├── evaluation/
+│   ├── evaluation_comparative.py   baseline vs agentique (RAGAS, reprenable)
+│   ├── gold_set.json, gold_set2.json
+│   └── results/                    générations, notes, comparaisons
+├── docs/                       site interactif (GitHub Pages)
+├── scripts/
+│   ├── export_site_data.py     résultats → docs/data/*.json
+│   └── capture_site.py         captures du README
+├── rag-frontend/               interface de chat React (mode « RAG Agentique »)
+├── scripts_windows/            installation, évaluation (double-clic)
+└── tests/test_site.py          vérification des données avant publication
 ```
 
-### 2. Backend (API FastAPI)
+## Lancer le projet
+
+Prérequis : Python 3.11+, [Ollama](https://ollama.com/download), Node 18+ (frontend).
 
 ```bash
-python -m venv venv
-venv\Scripts\activate            # Windows (PowerShell)
+ollama pull qwen2.5:7b          # LLM du RAG
+ollama pull qwen2.5:14b         # juge RAGAS
+python -m venv venv && venv\Scripts\activate
 pip install -r requirements.txt
 
-# (Première fois) construire l'index vectoriel :
 cd backend
-python scripts/build_index.py
-
-# Lancer l'API :
-python run.py                    # → http://localhost:8000
+python scripts/build_index.py   # première fois : index ChromaDB
+python run.py                   # API → http://localhost:8000/docs
 ```
 
-L'API expose :
-- `POST /query` — réponse JSON standard (`"mode": "agentic"` → RAG agentique, avec la `trace` des agents)
-- `GET  /query/stream` — réponse en streaming (SSE)
-- `GET  /health` / `GET /ready` — health checks
-- Docs interactives : http://localhost:8000/docs
+- API : `POST /query` avec `"mode": "agentic"` (réponse + `trace` des agents) ou
+  `"mode": "adaptive"` (baseline).
+- Frontend : `cd rag-frontend && npm install && npm run dev`.
+- Évaluation : `python evaluation/evaluation_comparative.py --gold gold_set.json gold_set2.json`
+  (ou `scripts_windows\2_evaluer.bat`), puis `python scripts/export_site_data.py`.
 
-### 3. Frontend (React)
+Configuration facultative dans `.env` : `LLM_MODEL`, `JUDGE_MODEL`, `LLM_PROVIDER`
+(`ollama` par défaut, `mistral` ou `google` avec clé API).
 
-```bash
-cd rag-frontend
-npm install
-cp .env.example .env             # VITE_API_URL=http://localhost:8000
-npm run dev                      # → http://localhost:5173
-```
+## Limites
 
-### 4. Évaluation (RAGAS)
+- 2 × 10 questions : un écart sur une question isolée est bruité ; on lit les moyennes.
+- Juge local de 14B : moins fiable qu'un grand modèle commercial, mais identique pour les deux systèmes.
+- Les outils du Researcher (BM25, reranker multilingue) améliorent aussi la recherche en eux-mêmes.
+- L'agentique coûte plus cher : 6 à 9 appels au LLM par question contre 2.
+- Le corpus se limite au texte du RGPD (pas de jurisprudence ni de lignes directrices CNIL).
 
-```bash
-# Pas besoin de lancer le backend : les scripts chargent le RAG en mémoire.
-# Comparaison baseline vs agentique (même LLM, même juge) :
-python evaluation/evaluation_comparative.py --gold gold_set.json gold_set2.json
-python evaluation/evaluation_comparative.py --limit 3        # test rapide
+## Auteur
 
-# Baseline seule (script historique) :
-python evaluation/evaluation_ragas.py gold_set2.json
-```
-
-Sous Windows : `scripts_windows\TOUT_LANCER.bat` enchaîne installation, évaluation et publication.
-Résultats : `evaluation/results/comparaison_<gold>.md` (+ `.png`, `.csv`).
-
-## Évaluation : les 4 métriques RAGAS
-
-On évalue le RAG sur 10 questions RGPD (8 conceptuelles + 2 pointues : montant des amendes, responsable vs sous-traitant). Le « juge » est un **LLM local plus grand** (`qwen2.5:14b` via Ollama, température 0). Il note **les deux systèmes de la même façon**, ce qui rend la comparaison équitable.
-
-| Phase | Métrique | Question posée |
-|---|---|---|
-| **Récupération** | Context Precision | Les bons articles sont-ils en haut du classement ? |
-| **Récupération** | Context Recall | A-t-on récupéré tous les articles nécessaires ? |
-| **Génération** | Faithfulness | La réponse est-elle fondée sur les articles (pas d'hallucination) ? |
-| **Génération** | Response Relevancy | La réponse colle-t-elle à la question ? |
-
-## Notes techniques (pièges rencontrés)
-
-- **IDs déterministes** : `indexing.py` utilise `chapitre::article` comme `parent_id` (et non un UUID aléatoire), sinon les chunks de ChromaDB pointent vers des parents introuvables après redémarrage → 0 contexte récupéré.
-- **Scoring séquentiel** : l'executor parallèle de RAGAS (`ragas.evaluate`) est instable sur Python 3.14 + Windows. `evaluation_ragas.py` score donc chaque métrique une par une via `asyncio.run()`.
-- **Juge ≠ LLM applicatif** : l'éval utilise un modèle juge dédié (`qwen2.5:14b`), à `num_predict=4096` (JSON structuré long demandé par RAGAS) et température 0 pour des sorties déterministes.
-- **Modèles locaux lents** : `evaluation_comparative.py` sauvegarde générations et notes au fil de l'eau (`evaluation/results/*.json`) ; relancer la commande reprend le calcul là où il s'était arrêté.
-- **Sorties structurées des agents** : chaque agent déclare un schéma Pydantic, converti en JSON Schema et imposé par Ollama (`format`). En cas d'échec, l'agent réessaie puis applique un repli déterministe.
-- **Console UTF-8** : `sys.stdout.reconfigure(encoding="utf-8")` en tête de script, sinon les emojis des `print` plantent sur la console Windows (cp1252).
-
-## Technologies
-
-- **LangChain** — orchestration du pipeline
-- **Ollama** (`qwen2.5:7b` pour le RAG, `qwen2.5:14b` pour le juge) — LLM locaux ; Mistral AI reste disponible en option
-- **LangGraph** — orchestration du RAG agentique multi-agents (état partagé, boucles CRAG et Reflexion)
-- **rank-bm25** — recherche lexicale pour le retrieval hybride
-- **ChromaDB** — base vectorielle
-- **sentence-transformers** — embeddings multilingues (`paraphrase-multilingual-MiniLM-L12-v2`) + reranker cross-encoder (`ms-marco-MiniLM-L-6-v2`)
-- **FastAPI** — API REST
-- **React + Vite + Redux + Tailwind** — frontend
-- **RAGAS** — évaluation
-
-## Équipe
-
-- Bryan MIGUEU
-- Membre 2
-- Membre 3
-- Membre 4
-
-## Licence
-
-Projet universitaire — UTC, Printemps 2026.
+Berulle Kamdem — UTC, GI04, UV AI31. Le RAG avancé de départ a été réalisé en équipe
+dans le cadre de l'UV.
