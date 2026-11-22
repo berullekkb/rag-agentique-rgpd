@@ -61,7 +61,7 @@ Le texte officiel du **RGPD** — Règlement (UE) 2016/679 — au format HTML (r
 ## 3. Architecture du dépôt
 
 ```
-AI31_Projet_RAG/
+rag-agentique-rgpd/
 ├── README.md                  # Documentation d'installation/lancement
 ├── GUIDE_PROJET.md            # ← CE document (explication approfondie)
 ├── requirements.txt           # Dépendances Python (uniques, racine)
@@ -366,7 +366,7 @@ Le pipeline est **générique** : il suffit de remplacer le parsing dans `indexi
 
 ---
 
-*Document généré pour l'équipe AI31 — UTC, Printemps 2026. À jour de l'état actuel du code.*
+*Document de référence du projet, à jour de l'état actuel du code.*
 
 ---
 

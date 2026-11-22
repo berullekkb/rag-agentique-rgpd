@@ -1,6 +1,5 @@
 # =============================================================================
-#  AI31_Projet_RAG — Dépendances Python (backend + évaluation)
-#  UTC, LO17/AI31 — Printemps 2026
+#  RAG agentique RGPD — Dépendances Python (backend + évaluation)
 #
 #  Versions épinglées sur un environnement fonctionnel (Python 3.14, Windows).
 #  Note : d'anciennes versions plus basses (pydantic 2.7, chromadb 0.5, …) ne

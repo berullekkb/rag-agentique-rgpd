@@ -3,9 +3,7 @@
 [![Publier le site](https://github.com/berullekkb/rag-agentique-rgpd/actions/workflows/pages.yml/badge.svg)](https://github.com/berullekkb/rag-agentique-rgpd/actions/workflows/pages.yml)
 
 **Site interactif : [berullekkb.github.io/rag-agentique-rgpd](https://berullekkb.github.io/rag-agentique-rgpd/)**
-Une page de rapport : un exemple, le graphe des agents qu'on peut rejouer, les réponses question par question, la carte des articles et les résultats RAGAS.
-
-<a href="https://berullekkb.github.io/rag-agentique-rgpd/#exemple"><img src="docs/images/site_exemple.png" alt="Exemple : à la question sur les principes du traitement, le RAG classique cite l'article 6, le RAG agentique retrouve l'article 5"></a>
+(graphe des agents rejouable, comparateur question par question, carte du RGPD, benchmark RAGAS).
 
 <table>
   <tr>
@@ -14,25 +12,25 @@ Une page de rapport : un exemple, le graphe des agents qu'on peut rejouer, les r
   </tr>
   <tr>
     <td><b>Graphe des agents</b> : les 7 agents LangGraph, leurs boucles (CRAG, Reflexion) et le parcours réel d'une question rejoué étape par étape.</td>
-    <td><b>Question par question</b> : pour une même question, les articles donnés au LLM (✓ = article attendu), la réponse et les 4 scores RAGAS de chaque système.</td>
+    <td><b>Comparateur</b> : pour une même question, les articles donnés au LLM (✓ = article attendu), la réponse et les 4 scores RAGAS de chaque système.</td>
   </tr>
   <tr>
     <td><a href="https://berullekkb.github.io/rag-agentique-rgpd/#carte"><img src="docs/images/site_carte.png" alt="Carte du RGPD : les 99 articles projetés par t-SNE, avec les articles récupérés par chaque système"></a></td>
-    <td><a href="https://berullekkb.github.io/rag-agentique-rgpd/#resultats"><img src="docs/images/site_benchmark.png" alt="Benchmark RAGAS : scores moyens par métrique et question par question"></a></td>
+    <td><a href="https://berullekkb.github.io/rag-agentique-rgpd/#benchmark"><img src="docs/images/site_benchmark.png" alt="Benchmark RAGAS : scores moyens par métrique et question par question"></a></td>
   </tr>
   <tr>
     <td><b>Carte du RGPD</b> : les 99 articles placés selon leurs embeddings ; on voit où cherche chaque système et où se trouve la bonne réponse.</td>
-    <td><b>Résultats</b> : faithfulness, answer relevancy, context precision et context recall, en moyenne et question par question.</td>
+    <td><b>Benchmark RAGAS</b> : faithfulness, answer relevancy, context precision et context recall, en moyenne et question par question.</td>
   </tr>
 </table>
 
-Projet AI31 (Indexation et Recherche d'Information, UTC) : un assistant qui répond aux
+Un assistant qui répond aux
 questions sur le **RGPD** (règlement UE 2016/679) en s'appuyant **uniquement** sur le
 texte du règlement, et la démonstration qu'une **orchestration agentique multi-agents**
-fait mieux qu'un RAG classique linéaire.
+fait mieux qu'un RAG avancé linéaire.
 
 - **Corpus** : texte officiel du RGPD (EUR-Lex), 11 chapitres, 99 articles.
-- **Deux systèmes** : un RAG classique (multi-query, parent/child, reranking) et un RAG
+- **Deux systèmes** : un RAG avancé (multi-query, parent/child, reranking) et un RAG
   agentique de 7 agents LangGraph (planification, correction CRAG, réflexion).
 - **100 % local** : LLM `qwen2.5:7b` et juge `qwen2.5:14b` via **Ollama**, aucune clé API.
 - **Évaluation** : RAGAS sur 2 jeux de 10 questions, même LLM et même juge pour les deux systèmes.
@@ -43,7 +41,7 @@ fait mieux qu'un RAG classique linéaire.
 **Résultats intermédiaires** (calcul en cours sur le poste local, 5/10 questions
 traitées par les deux systèmes, notation RAGAS à venir) :
 
-- **Articles attendus retrouvés** : 43 % pour le RAG classique contre **83 %** pour le
+- **Articles attendus retrouvés** : 43 % pour le RAG avancé contre **83 %** pour le
   RAG agentique (part des articles cités par la réponse de référence qui sont donnés au LLM).
 - Exemple : à « Quels sont les principes relatifs au traitement des données personnelles ? »,
   la baseline répond avec l'article 6 (licéité) ; l'agentique, après une boucle CRAG
@@ -55,7 +53,7 @@ Le tableau RAGAS complet et les captures seront mis à jour à la fin du calcul.
 
 ## Pourquoi un RAG agentique ? Diagnostic de la baseline
 
-Le RAG classique de départ (`backend/app/services/retriever.py`, `pipeline.py`) :
+Le RAG avancé de départ (`backend/app/services/retriever.py`, `pipeline.py`) :
 
 ```
 question → multi-query (4 variantes) → top-6 chunks / variante → articles parents
@@ -121,7 +119,7 @@ puis applique un repli déterministe. Détails : [`RAG_AGENTIQUE.md`](RAG_AGENTI
 ```
 rag-agentique-rgpd/
 ├── backend/                    API FastAPI + pipelines RAG
-│   ├── app/services/retriever.py, pipeline.py   RAG classique (baseline)
+│   ├── app/services/retriever.py, pipeline.py   RAG avancé (baseline)
 │   ├── app/services/agentic/                    RAG agentique LangGraph
 │   │   ├── graph.py     graphe et agents
 │   │   ├── prompts.py   prompts + schémas de sortie
@@ -175,5 +173,4 @@ Configuration facultative dans `.env` : `LLM_MODEL`, `JUDGE_MODEL`, `LLM_PROVIDE
 
 ## Auteur
 
-Berulle Kamdem — UTC, GI04, UV AI31. Le RAG classique de départ a été réalisé en équipe
-dans le cadre de l'UV.
+Berulle Kamdem. Le RAG avancé de départ a été réalisé en équipe.
