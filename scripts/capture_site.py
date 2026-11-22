@@ -20,11 +20,12 @@ IMG = Path(os.environ.get("SHOTS_DIR", DOCS / "images"))
 
 SHOTS = [
     # (fichier, sélecteur de section, action éventuelle)
-    ("site_accueil.png", ".hero", None),
+    ("site_accueil.png", "#top", None),
     ("site_agents.png", "#agents", "replay"),
+    ("site_exemple.png", "#exemple", None),
     ("site_comparateur.png", "#comparateur", None),
     ("site_carte.png", "#carte", None),
-    ("site_benchmark.png", "#benchmark", None),
+    ("site_benchmark.png", "#resultats", None),
 ]
 
 
@@ -42,7 +43,7 @@ def main() -> None:
             page = browser.new_page(viewport={"width": 1280, "height": 900}, device_scale_factor=2)
             page.goto(f"http://127.0.0.1:{port}/index.html")
             page.wait_for_selector("#benchTable tr")
-            page.add_style_tag(content=".topnav{position:static}")
+            page.wait_for_timeout(800)   # polices web
             for name, sel, action in SHOTS:
                 if only and name not in only:
                     continue
@@ -52,7 +53,11 @@ def main() -> None:
                 el = page.locator(sel)
                 el.scroll_into_view_if_needed()
                 page.wait_for_timeout(300)
-                el.screenshot(path=str(IMG / name))
+                box = el.bounding_box()
+                # la section est étroite mais ses figures débordent : on prend toute la largeur utile
+                page.screenshot(path=str(IMG / name), full_page=True,
+                                clip={"x": 120, "y": box["y"] + page.evaluate("window.scrollY") + 8,
+                                      "width": 1040, "height": box["height"] + 16})
                 print("✓", name)
             browser.close()
     finally:

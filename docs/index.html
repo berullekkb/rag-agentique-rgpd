@@ -3,158 +3,151 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RAG agentique · RGPD — RAG avancé vs multi-agents LangGraph</title>
-<meta name="description" content="Comparaison d'un RAG avancé et d'un RAG agentique multi-agents (LangGraph) sur le texte du RGPD, avec des LLM locaux (Ollama) et une évaluation RAGAS.">
+<title>RAG agentique sur le RGPD – projet AI31</title>
+<meta name="description" content="Comparaison d'un RAG avancé et d'un RAG agentique multi-agents (LangGraph) sur le texte du RGPD, avec des modèles locaux (Ollama) et une évaluation RAGAS.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230d2350'/><text x='16' y='22' font-size='15' text-anchor='middle' fill='%23f2b705' font-family='Arial' font-weight='700'>§</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text x='16' y='25' font-size='26' text-anchor='middle' font-family='Georgia' fill='%23003399'>§</text></svg>">
 </head>
 <body>
-<header class="topnav">
-  <div class="brand"><span class="stars">★★★</span> RAG agentique · RGPD</div>
-  <nav>
-    <a href="#agents">Graphe des agents</a>
-    <a href="#comparateur">Comparateur</a>
-    <a href="#carte">Carte du RGPD</a>
-    <a href="#benchmark">Benchmark RAGAS</a>
-    <a href="#methode">Méthode</a>
+<main>
+
+<header class="masthead" id="top">
+  <p class="course">Projet de l'UV AI31 (indexation et recherche d'information), UTC</p>
+  <h1>Répondre aux questions sur le RGPD : un RAG classique face à une équipe d'agents</h1>
+  <p class="byline">Berulle Kamdem, novembre 2026. Code : <a href="https://github.com/berullekkb/rag-agentique-rgpd">github.com/berullekkb/rag-agentique-rgpd</a></p>
+
+  <p class="abstract">On pose une question en français sur le règlement général sur la protection des
+    données ; le système cherche les articles utiles dans le texte officiel puis rédige une réponse
+    qui ne s'appuie que sur eux. Nous comparons deux manières d'organiser ce travail : un pipeline
+    RAG linéaire, et un graphe de sept agents LangGraph qui planifient, vérifient ce qu'ils ont
+    trouvé et relisent leur propre réponse. Les deux tournent en local avec le même modèle
+    (<span class="m" id="mLLM">qwen2.5:7b</span>) et sont notés par le même juge
+    (<span class="m" id="mJudge">qwen2.5:14b</span>).</p>
+
+  <nav class="toc" aria-label="Sommaire">
+    <a href="#exemple">Un exemple</a>
+    <a href="#agents">Les agents</a>
+    <a href="#comparateur">Question par question</a>
+    <a href="#carte">Où cherchent-ils ?</a>
+    <a href="#resultats">Résultats</a>
+    <a href="#methode">Méthode et limites</a>
   </nav>
-  <a class="gh" href="https://github.com/berullekkb/rag-agentique-rgpd">GitHub ↗</a>
 </header>
 
-<div class="hero" id="top">
-  <div class="hero-inner">
-    <div>
-      <h1>Du RAG avancé au <em>RAG agentique</em> multi-agents</h1>
-      <p class="lead">Un assistant qui répond aux questions sur le RGPD en s'appuyant uniquement sur le
-        texte du règlement. On compare un pipeline RAG classique et un graphe de 7 agents
-        LangGraph (planification, correction CRAG, réflexion), avec le même LLM local et le
-        même juge RAGAS.</p>
-      <div class="chips">
-        <span class="chip">99 articles du RGPD</span>
-        <span class="chip">LangGraph</span>
-        <span class="chip">Ollama · 100 % local</span>
-        <span class="chip">ChromaDB + BM25</span>
-        <span class="chip">RAGAS</span>
+<section id="exemple">
+  <h2>Un exemple pour commencer</h2>
+  <p>La question la plus simple du jeu de test montre bien le problème de départ.</p>
+  <div id="example" class="wide"></div>
+</section>
+
+<section id="agents">
+  <h2>Ce que font les agents</h2>
+  <p>Le RAG classique enchaîne ses étapes une seule fois, sans revenir en arrière. Le RAG agentique
+    répartit le travail entre des agents spécialisés qui partagent un même état. Deux boucles
+    changent tout : si le contexte est jugé insuffisant, on reformule la recherche (principe de
+    <em>Corrective RAG</em>) ; si la réponse contient des affirmations non appuyées par un article,
+    on la révise (<em>Reflexion</em>). Les deux boucles sont limitées pour que le calcul se termine.</p>
+
+  <figure class="wide">
+    <div class="fig-row">
+      <div class="fig-main">
+        <svg id="graph" class="chart" viewBox="0 0 640 470" role="img" aria-label="Graphe des agents du RAG agentique"></svg>
+        <svg id="pipeline" class="chart pipeline" viewBox="0 0 640 64" role="img" aria-label="Pipeline linéaire du RAG classique"></svg>
+      </div>
+      <aside class="fig-side" id="agentInfo" aria-live="polite"></aside>
+    </div>
+    <figcaption><b>Figure 1.</b> En haut, le graphe des agents (cliquez sur un agent pour lire son rôle) ;
+      en bas, le pipeline du RAG classique. Pour suivre une exécution réelle, choisissez une question
+      <label class="inline"><select id="replayQ" class="q"></select></label>
+      puis <button type="button" id="replayBtn" class="linkish">rejouez-la</button>.</figcaption>
+  </figure>
+</section>
+
+<section id="comparateur">
+  <h2>Question par question</h2>
+  <p>Pour chaque question du jeu de test, voici ce que chaque système a donné à lire au modèle et ce
+    qu'il a répondu. Un article coché fait partie de ceux que cite la réponse de référence.</p>
+  <p class="picker">Jeu de questions : <span id="goldSeg" class="seg"></span><br>
+    <label>Question : <select id="cmpQ" class="q"></select></label></p>
+  <blockquote class="reference" id="cmpRef"></blockquote>
+  <figure class="wide">
+    <div class="two">
+      <div id="cmpBase" class="col"></div>
+      <div id="cmpAgent" class="col"></div>
+    </div>
+    <figcaption><b>Figure 2.</b> Réponses des deux systèmes à la même question, avec leurs quatre notes RAGAS (sur 1).</figcaption>
+  </figure>
+</section>
+
+<section id="carte">
+  <h2>Où cherchent-ils ?</h2>
+  <p>Chaque point est un article du RGPD, placé selon la ressemblance de son contenu avec les autres
+    (projection t-SNE des vecteurs utilisés par la recherche). Les articles voisins parlent de choses
+    proches : on voit ainsi si un système cherche au bon endroit ou à côté. Survolez un point pour
+    lire le début de l'article.</p>
+  <p class="picker"><label>Question : <select id="mapQ" class="q"></select></label></p>
+  <figure class="wide">
+    <svg id="map" class="chart" viewBox="0 0 1100 560" role="img" aria-label="Carte des articles du RGPD"></svg>
+    <figcaption><b>Figure 3.</b> Les 99 articles. Cercle <span class="key base">orange</span> : donné au modèle par le RAG classique ;
+      cercle <span class="key agent">bleu</span> : par le RAG agentique ; cercle en pointillés : attendu par la réponse de référence.</figcaption>
+  </figure>
+</section>
+
+<section id="resultats">
+  <h2>Résultats</h2>
+  <p id="summary"></p>
+  <p class="picker">Jeu de questions : <span id="goldSeg2" class="seg"></span></p>
+  <figure class="wide">
+    <div class="two">
+      <div>
+        <svg id="barChart" class="chart" viewBox="0 0 560 330" role="img" aria-label="Notes RAGAS moyennes"></svg>
+      </div>
+      <div>
+        <svg id="dumbbell" class="chart" viewBox="0 0 560 330" role="img" aria-label="Notes RAGAS par question"></svg>
+        <label class="small">Note affichée : <select id="dumbMetric"></select></label>
       </div>
     </div>
-    <div class="kpis" id="kpis"></div>
-  </div>
-</div>
-
-<!-- ── 1. graphe des agents ─────────────────────────────────── -->
-<section class="block" id="agents">
-  <h2>Le graphe des agents</h2>
-  <p class="sub">Chaque nœud est un agent avec un rôle, un prompt et une sortie structurée. Les flèches en
-    pointillés sont les boucles : reformulation (CRAG) et révision (Reflexion), bornées pour garantir la
-    terminaison. Cliquez sur un agent pour voir son rôle, ou rejouez le parcours réel d'une question.</p>
-  <div class="controls">
-    <label for="replayQ">Rejouer la question</label>
-    <select id="replayQ" class="q"></select>
-    <button class="btn" id="replayBtn">▶ Rejouer</button>
-  </div>
-  <div class="grid-graph">
-    <div class="card">
-      <svg id="graph" class="chart" viewBox="0 0 640 470" role="img" aria-label="Graphe des agents du RAG agentique"></svg>
-      <div class="pipeline-base">
-        <div class="muted small" style="margin-bottom:6px">Pour comparaison — le RAG avancé (baseline) est un pipeline linéaire, sans retour en arrière :</div>
-        <svg id="pipeline" class="chart" viewBox="0 0 640 64" role="img" aria-label="Pipeline linéaire du RAG avancé"></svg>
-      </div>
-    </div>
-    <div class="card agent-info" id="agentInfo"></div>
-  </div>
+    <figcaption><b>Figure 4.</b> À gauche, la moyenne de chaque note RAGAS ; à droite, la même note
+      question par question (orange : RAG classique, bleu : RAG agentique). Cliquer sur une ligne
+      ouvre la question dans la figure 2.</figcaption>
+  </figure>
+  <table class="booktabs" id="benchTable"></table>
+  <p class="note" id="benchSub"></p>
 </section>
 
-<!-- ── 2. comparateur ───────────────────────────────────────── -->
-<section class="block" id="comparateur">
-  <h2>Comparateur question par question</h2>
-  <p class="sub">Les deux systèmes reçoivent la même question. On voit les articles qu'ils ont donnés au LLM
-    (<span style="color:var(--good);font-weight:600">✓</span> = article attendu par la réponse de référence),
-    leur réponse et leurs quatre scores RAGAS.</p>
-  <div class="controls">
-    <div class="seg" id="goldSeg"></div>
-    <select id="cmpQ" class="q"></select>
-  </div>
-  <div class="reference" id="cmpRef"></div>
-  <div class="grid2">
-    <div class="card" id="cmpBase"></div>
-    <div class="card" id="cmpAgent"></div>
-  </div>
-</section>
-
-<!-- ── 3. carte ─────────────────────────────────────────────── -->
-<section class="block" id="carte">
-  <h2>Carte du RGPD</h2>
-  <p class="sub">Les 99 articles placés selon la ressemblance de leurs embeddings (ceux qu'utilise la
-    recherche vectorielle, projetés en 2D par t-SNE). Pour la question choisie : les articles récupérés par
-    le RAG avancé, par le RAG agentique, et les articles attendus. Survolez un point pour lire l'article.</p>
-  <div class="controls">
-    <select id="mapQ" class="q"></select>
-  </div>
-  <div class="legend">
-    <span><i class="sw-base"></i>RAG avancé</span>
-    <span><i class="sw-agent"></i>RAG agentique</span>
-    <span><i style="border:1.5px dashed #0b0b0b;border-radius:50%"></i>Article attendu</span>
-  </div>
-  <div class="card"><svg id="map" class="chart" viewBox="0 0 1100 600" role="img" aria-label="Carte t-SNE des articles du RGPD"></svg></div>
-</section>
-
-<!-- ── 4. benchmark ─────────────────────────────────────────── -->
-<section class="block" id="benchmark">
-  <h2>Benchmark RAGAS</h2>
-  <p class="sub" id="benchSub"></p>
-  <div class="controls"><div class="seg" id="goldSeg2"></div></div>
-  <div class="grid2">
-    <div class="card">
-      <h3 style="margin:0 0 4px;font-size:16px">Scores moyens par métrique</h3>
-      <div class="legend"><span><i class="sw-base"></i>RAG avancé</span><span><i class="sw-agent"></i>RAG agentique</span></div>
-      <svg id="barChart" class="chart" viewBox="0 0 560 330" role="img" aria-label="Scores RAGAS moyens"></svg>
-    </div>
-    <div class="card">
-      <h3 style="margin:0 0 4px;font-size:16px">Question par question</h3>
-      <div class="controls" style="margin:6px 0 0"><select id="dumbMetric"></select></div>
-      <div class="legend"><span><i class="sw-base"></i>RAG avancé</span><span><i class="sw-agent"></i>RAG agentique</span></div>
-      <svg id="dumbbell" class="chart" viewBox="0 0 560 330" role="img" aria-label="Scores RAGAS par question"></svg>
-    </div>
-  </div>
-  <div class="card" style="margin-top:18px">
-    <h3 style="margin:0 0 8px;font-size:16px">Tableau des résultats</h3>
-    <table class="tbl" id="benchTable"></table>
-  </div>
-</section>
-
-<!-- ── 5. méthode ───────────────────────────────────────────── -->
-<section class="block method" id="methode">
-  <h2>Méthode</h2>
-  <div class="grid2">
-    <div class="card">
-      <h3 style="margin-top:0">Protocole équitable</h3>
-      <ol>
-        <li><b>Même corpus, même index</b> : RGPD (UE 2016/679), 99 articles, chunks de 300 caractères dans ChromaDB, embeddings <code>paraphrase-multilingual-MiniLM-L12-v2</code>.</li>
-        <li><b>Même LLM</b> pour les deux systèmes : <code id="mLLM">qwen2.5:7b</code> via Ollama, en local.</li>
-        <li><b>Même premier jet</b> : le rédacteur agentique utilise le même prompt RGPD que la baseline ; l'écart vient de l'orchestration.</li>
-        <li><b>Même juge</b> : <code id="mJudge">qwen2.5:14b</code>, température 0, plus gros que le modèle évalué.</li>
-        <li><b>Quatre métriques RAGAS</b> : faithfulness, answer relevancy, context precision, context recall.</li>
-      </ol>
-    </div>
-    <div class="card">
-      <h3 style="margin-top:0">Limites</h3>
-      <ul>
-        <li>10 + 10 questions : les écarts sur une question isolée sont bruités ; on lit les moyennes et les tendances.</li>
-        <li>Le juge est un LLM local de 14 milliards de paramètres : moins fiable qu'un grand modèle commercial, mais identique pour les deux systèmes.</li>
-        <li>Les outils de l'agent de recherche (BM25 hybride, reranker multilingue) améliorent aussi la recherche en eux-mêmes ; ils font partie de sa boîte à outils.</li>
-        <li>Le RAG agentique est plus lent (6 à 9 appels au LLM par question contre 2).</li>
-      </ul>
-    </div>
-  </div>
+<section id="methode">
+  <h2>Méthode et limites</h2>
+  <p>Les deux systèmes partagent tout sauf l'orchestration : le même texte du RGPD découpé en
+    morceaux de 300 caractères dans ChromaDB, les mêmes vecteurs
+    (<span class="m">paraphrase-multilingual-MiniLM-L12-v2</span>), le même modèle de langue, et
+    surtout le même prompt pour rédiger la première version de la réponse. L'agent rédacteur
+    reçoit simplement un meilleur contexte, puis la réponse est relue.</p>
+  <p>Les notes viennent de RAGAS. La <em>faithfulness</em> vérifie que chaque affirmation de la
+    réponse est appuyée par le contexte ; l'<em>answer relevancy</em>, qu'elle répond à la
+    question ; la <em>context precision</em>, que les bons articles sont en tête ; le
+    <em>context recall</em>, qu'il ne manque rien par rapport à la référence. Nous ajoutons une
+    mesure qui ne dépend d'aucun modèle : la part des articles cités par la référence qui ont
+    effectivement été retrouvés.</p>
+  <p>Quelques réserves. Vingt questions, c'est peu : une différence sur une question isolée ne
+    prouve rien, seules les tendances comptent. Le juge est un modèle local de 14 milliards de
+    paramètres, moins fiable qu'un grand modèle commercial, mais il note les deux systèmes de la
+    même façon. Les outils de l'agent chercheur (recherche lexicale BM25, reranker multilingue)
+    améliorent aussi la recherche à eux seuls. Enfin, l'approche agentique coûte plus cher :
+    six à neuf appels au modèle par question au lieu de deux.</p>
 </section>
 
 <footer>
-  Projet AI31 — Indexation et Recherche d'Information, UTC. Berulle Kamdem.
-  Code et données : <a href="https://github.com/berullekkb/rag-agentique-rgpd">github.com/berullekkb/rag-agentique-rgpd</a>.
-  Ce site est statique : il affiche les résultats exportés par <code>scripts/export_site_data.py</code>.
+  <p>Projet réalisé dans le cadre de l'UV AI31 à l'UTC. Le RAG classique de départ a été construit en
+    équipe ; l'approche agentique, l'évaluation et cette page sont de Berulle Kamdem. Les données
+    affichées sont exportées par <span class="m">scripts/export_site_data.py</span> à partir des
+    résultats de l'évaluation.</p>
 </footer>
+</main>
 
-<div class="tip" id="tip"></div>
+<div class="tip" id="tip" role="tooltip"></div>
 <script src="assets/app.js"></script>
 </body>
 </html>

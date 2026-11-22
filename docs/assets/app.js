@@ -8,7 +8,7 @@ const METRIC_LABEL = {
   context_recall: "Context recall",
 };
 const SYS = {
-  baseline: { label: "RAG avancé", color: "var(--base)", hex: "#eb6834" },
+  baseline: { label: "RAG classique", color: "var(--base)", hex: "#eb6834" },
   agentic: { label: "RAG agentique", color: "var(--agent)", hex: "#2a78d6" },
 };
 const GOLD_LABEL = { gold_set: "Questions conceptuelles", gold_set2: "Définitions" };
@@ -79,23 +79,47 @@ function systemMeans(qs) {
   return out;
 }
 
-/* ── KPI ─────────────────────────────────────────────────────── */
-function renderKpis() {
-  const all = Object.values(state.results.gold_sets).flat();
-  const m = systemMeans(all);
-  const box = $("#kpis"); box.innerHTML = "";
-  const kpi = (v, l) => box.append(h("div", { class: "kpi", html: `<div class="v">${v}</div><div class="l">${l}</div>` }));
-  if (m.scored) {
-    const d = m.agentic.avg - m.baseline.avg;
-    kpi(`${d >= 0 ? "+" : ""}${fmt(d, 3)}`, `Moyenne RAGAS (4 métriques) : ${fmt(m.baseline.avg, 2)} → ${fmt(m.agentic.avg, 2)}`);
-    const dr = m.agentic.context_recall - m.baseline.context_recall;
-    kpi(`${dr >= 0 ? "+" : ""}${fmt(dr, 2)}`, "Context recall (agentique − baseline)");
-  } else {
-    kpi("…", "Notation RAGAS en cours de calcul");
-    kpi(`${m.n}<small> / ${all.length}</small>`, "Questions traitées par les deux systèmes");
+/* ── exemple d'ouverture et résumé ──────────────────────────── */
+function directAnswer(text) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((l) => /^\s*#{1,4}\s.*r[ée]ponse directe/i.test(l));
+  const out = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    if (/^\s*#{1,4}\s/.test(lines[i])) { if (out.length) break; else continue; }
+    if (lines[i].trim()) out.push(lines[i].trim());
   }
-  kpi(`${Math.round((m.baseline.hit ?? 0) * 100)} % → ${Math.round((m.agentic.hit ?? 0) * 100)} %`, "Articles attendus retrouvés (baseline → agentique)");
-  kpi(`×${m.baseline.latency ? (m.agentic.latency / m.baseline.latency).toFixed(1).replace(".", ",") : "—"}`, "Coût en temps de l'approche agentique");
+  let body = out.join(" ").replace(/\*\*/g, "").replace(/^\[|\]$/g, "");
+  return body.length > 320 ? body.slice(0, 320).replace(/\s\S*$/, "") + "…" : body;
+}
+function renderExample() {
+  const box = $("#example");
+  const cand = allQuestions().filter((x) => x.q.systems.baseline && x.q.systems.agentic);
+  // la question où l'écart d'articles retrouvés est le plus net
+  const score = (q, sys) => q.gold.length ? q.gold.filter((g) => q.systems[sys].articles.includes(g)).length / q.gold.length : 0;
+  cand.sort((a, b) => (score(b.q, "agentic") - score(b.q, "baseline")) - (score(a.q, "agentic") - score(a.q, "baseline")));
+  const pick = cand[0];
+  if (!pick) { box.innerHTML = `<p class="pending">L'exemple apparaîtra quand les deux systèmes auront traité une question.</p>`; return; }
+  const q = pick.q;
+  const col = (sys) => {
+    const r = q.systems[sys];
+    const found = q.gold.filter((g) => r.articles.includes(g));
+    return `<div class="ex-col ${sys === "baseline" ? "base" : "agent"}"><h3>${SYS[sys].label}</h3><p class="meta">Articles lus : ${r.articles.join(", ")}</p>
+      <p>${esc(directAnswer(r.response))}</p>
+      <p class="verdict">${q.gold.length ? (found.length ? `Retrouve ${found.length === q.gold.length ? "l'article attendu" : found.length + " des " + q.gold.length + " articles attendus"} (${found.join(", ")}).` : `Ne retrouve pas l'article attendu (${q.gold.join(", ")}).`) : ""}</p></div>`;
+  };
+  box.innerHTML = `<p class="ex-q">« ${esc(q.question)} »</p><div class="two">${col("baseline")}${col("agentic")}</div>
+    <p class="note" style="max-width:var(--measure);margin:1rem auto 0">Réponse attendue : ${esc(q.reference)}</p>`;
+}
+function renderSummary() {
+  const all = Object.values(state.results.gold_sets).flat();
+  const m = systemMeans(all), pct = (v) => Math.round((v ?? 0) * 100) + "\u00a0%";
+  let t = `Sur les ${m.n} questions traitées par les deux systèmes, le RAG agentique retrouve ${pct(m.agentic.hit)} des articles attendus, contre ${pct(m.baseline.hit)} pour le RAG classique. `;
+  if (m.scored) {
+    t += `La moyenne des quatre notes RAGAS passe de ${fmt(m.baseline.avg, 2)} à ${fmt(m.agentic.avg, 2)}`;
+    t += m.scored < m.n ? ` (sur les ${m.scored} questions déjà notées). ` : ". ";
+  } else t += "La notation RAGAS est en cours de calcul ; les graphiques se rempliront à mesure. ";
+  if (m.baseline.latency) t += `En contrepartie, une réponse agentique prend en moyenne ${Math.round(m.agentic.latency / 60)}\u00a0min sur notre machine, contre ${Math.round(m.baseline.latency / 60)}\u00a0min.`;
+  $("#summary").textContent = t;
 }
 
 /* ── graphe des agents ───────────────────────────────────────── */
@@ -174,7 +198,7 @@ function renderGraph() {
   }
   for (const [id, n] of Object.entries(NODES)) {
     const g = s("g", { class: "node", tabindex: 0, role: "button", "aria-label": n.t });
-    g.append(s("rect", { x: n.x - n.w / 2, y: n.y - n.h / 2, width: n.w, height: n.h, rx: id === "question" || id === "end" ? n.h / 2 : 9 }));
+    g.append(s("rect", { x: n.x - n.w / 2, y: n.y - n.h / 2, width: n.w, height: n.h, rx: 3 }));
     g.append(s("text", { x: n.x, y: n.y + (n.h > 40 ? -2 : 4), class: "t", "text-anchor": "middle" }, n.t));
     if (n.h > 40) g.append(s("text", { x: n.x, y: n.y + 14, class: "s", "text-anchor": "middle" }, n.s));
     g.addEventListener("click", () => selectAgent(id));
@@ -191,9 +215,9 @@ function renderPipeline() {
   const w = 94, gap = 13, y = 32;
   steps.forEach((t, i) => {
     const x = 6 + i * (w + gap);
-    svg.append(s("rect", { x, y: y - 18, width: w, height: 36, rx: 8, fill: "#fff", stroke: "#e9b79f", "stroke-width": 1.5 }));
-    svg.append(s("text", { x: x + w / 2, y: y + 4, "text-anchor": "middle", "font-size": 10.5, fill: "#52514e" }, t));
-    if (i < steps.length - 1) svg.append(s("path", { d: `M${x + w + 1},${y} L${x + w + gap - 2},${y}`, stroke: "#e9b79f", "stroke-width": 1.6, "marker-end": "url(#arr)" }));
+    svg.append(s("rect", { x, y: y - 18, width: w, height: 36, rx: 3, fill: "#fff", stroke: "#eb6834", "stroke-width": 1.2 }));
+    svg.append(s("text", { x: x + w / 2, y: y + 4, "text-anchor": "middle", "font-size": 10.5, fill: "#5c5c5c" }, t));
+    if (i < steps.length - 1) svg.append(s("path", { d: `M${x + w + 1},${y} L${x + w + gap - 2},${y}`, stroke: "#eb6834", "stroke-width": 1.2, "marker-end": "url(#arr)" }));
   });
 }
 
@@ -218,8 +242,8 @@ function traceNode(line) { const k = line.split(":")[0].trim(); return NODES[k] 
 function renderTraceList(active) {
   const box = $("#traceBox"); if (!box) return;
   const tr = currentTrace();
-  if (!tr.length) { box.innerHTML = `<p class="muted small" style="margin-top:14px">Trace disponible dès que la question a été traitée par le RAG agentique.</p>`; return; }
-  box.innerHTML = `<div class="muted small" style="margin-top:14px">Trace réelle de l'exécution (${tr.length} étapes)</div>`;
+  if (!tr.length) { box.innerHTML = `<p class="trace-title">La trace apparaîtra quand le RAG agentique aura traité cette question.</p>`; return; }
+  box.innerHTML = `<div class="trace-title">Trace de l'exécution réelle, ${tr.length} étapes :</div>`;
   const ul = h("ul", { class: "trace" });
   tr.forEach((l, i) => {
     const [k, ...rest] = l.split(":");
@@ -255,8 +279,8 @@ function fillQuestionSelect(sel, onlyGold) {
   sel.innerHTML = "";
   const items = onlyGold ? questions().map((q, i) => ({ g: state.gold, i, q })) : allQuestions();
   for (const { g, i, q } of items) {
-    const done = q.systems.agentic ? "" : " (agentique en cours)";
-    sel.append(h("option", { value: `${g}|${i}` }, `${onlyGold ? "" : (g === "gold_set" ? "C" : "D") + (i + 1) + " · "}${q.question}${done}`));
+    const done = q.systems.agentic ? "" : " (en attente)";
+    sel.append(h("option", { value: `${g}|${i}` }, `${onlyGold ? "" : (g === "gold_set" ? "C" : "D") + (i + 1) + ". "}${q.question}${done}`));
   }
 }
 function goldSeg(container, onChange) {
@@ -275,32 +299,31 @@ function renderCompare() {
 }
 function renderCompareBody() {
   const q = questions()[state.q]; if (!q) return;
-  $("#cmpRef").innerHTML = `<b>Réponse de référence</b> — ${esc(q.reference)}` +
-    (q.gold.length ? `<br><span class="small">Articles attendus : ${q.gold.map((n) => `<b>${n}</b>`).join(", ")}</span>` : "");
+  $("#cmpRef").innerHTML = `<b>Réponse de référence.</b> ${esc(q.reference)}`;
   for (const [sys, boxId] of [["baseline", "#cmpBase"], ["agentic", "#cmpAgent"]]) {
     const box = $(boxId), r = q.systems[sys], S = SYS[sys];
-    box.innerHTML = `<div class="col-head"><h3><i style="background:${S.color}"></i>${S.label}</h3>` +
-      (r ? `<span class="tag">${r.latency_s != null ? fmt(r.latency_s, 0) + " s" : ""} · ${r.articles.length} articles</span>` : "") + `</div>`;
-    if (!r) { box.append(h("div", { class: "pending" }, "Réponse en cours de calcul sur le poste local…")); continue; }
-    const arts = h("div", { class: "arts" });
+    box.className = "col " + (sys === "baseline" ? "base" : "agent");
+    box.innerHTML = `<h3>${S.label}${r && r.latency_s != null ? ` <span>${Math.round(r.latency_s)} s</span>` : ""}</h3>`;
+    if (!r) { box.append(h("p", { class: "pending" }, "Pas encore traitée par ce système.")); continue; }
+    const arts = h("div", { class: "arts" }, "Articles lus : ");
     for (const n of r.articles) {
       const hit = q.gold.includes(n);
-      const chip = h("span", { class: "art " + (hit ? "hit" : "miss") }, `Art. ${n}`);
-      chip.addEventListener("mousemove", (e) => showTip(e, `<b>${esc(artTitle(n))}</b>${hit ? "<br>✓ attendu par la référence" : ""}`));
+      const chip = h("span", { class: "art" + (hit ? " hit" : ""), tabindex: 0 }, `art. ${n}`);
+      chip.addEventListener("mousemove", (e) => showTip(e, `<b>${esc(artTitle(n))}</b>${hit ? "<br>Cité par la réponse de référence." : ""}`));
       chip.addEventListener("mouseleave", hideTip);
       arts.append(chip);
     }
     const missing = q.gold.filter((n) => !r.articles.includes(n));
-    for (const n of missing) arts.append(h("span", { class: "art gold", title: artTitle(n) }, `Art. ${n} manquant`));
+    if (missing.length) arts.append(h("span", { class: "art gold" }, `manque : ${missing.map((n) => "art. " + n).join(", ")}`));
     box.append(arts, h("div", { class: "answer", html: mdLite(r.response) }));
-    const bars = h("div", { class: "scorebars" });
+    const tbl = h("table", { class: "scores" });
     for (const m of state.results.metrics) {
       const v = r.scores[m];
-      bars.append(h("span", {}, METRIC_LABEL[m]),
-        h("div", { class: "track" }, h("div", { class: "fill", style: `width:${(v ?? 0) * 100}%;background:${S.color}` })),
-        h("span", { class: "val" }, v == null ? "…" : fmt(v, 2)));
+      tbl.append(h("tr", {}, h("td", {}, METRIC_LABEL[m]),
+        h("td", { style: "width:45%" }, h("div", { class: "bar" }, h("i", { style: `width:${(v ?? 0) * 100}%;background:${S.color}` }))),
+        h("td", { class: "v" }, v == null ? "à venir" : fmt(v, 2))));
     }
-    box.append(bars);
+    box.append(tbl);
   }
 }
 
@@ -328,9 +351,9 @@ function drawMap() {
     const hit = s("circle", { cx, cy, r: 14, class: "hit-area" });
     hit.addEventListener("mousemove", (e) => {
       dot.classList.add("hov");
-      const tags = [base.has(a.num) && "récupéré par le RAG avancé", ag.has(a.num) && "récupéré par le RAG agentique", gold.has(a.num) && "attendu"].filter(Boolean);
-      showTip(e, `<b>Article ${a.num} – ${esc(a.titre)}</b><br><span class="muted">${esc(a.chapitre)} · ${esc(a.titre_chapitre)}</span>` +
-        (tags.length ? `<br>${tags.join(" · ")}` : "") + `<div style="margin-top:6px">${esc(a.extrait.slice(0, 260))}…</div>`);
+      const tags = [base.has(a.num) && "lu par le RAG classique", ag.has(a.num) && "lu par le RAG agentique", gold.has(a.num) && "attendu par la référence"].filter(Boolean);
+      showTip(e, `<b>Article ${a.num}, ${esc(a.titre)}</b><br>${esc(a.chapitre.replace("Ch. ", "Chapitre "))}, ${esc(a.titre_chapitre.toLowerCase())}` +
+        (tags.length ? `<br>${tags.join(", ")}.` : "") + `<div style="margin-top:6px">${esc(a.extrait.slice(0, 260))}…</div>`);
     });
     hit.addEventListener("mouseleave", () => { dot.classList.remove("hov"); hideTip(); });
     grp.append(hit); svg.append(grp);
@@ -341,15 +364,15 @@ function drawMap() {
 function renderBench() {
   goldSeg($("#goldSeg2"), () => { state.q = 0; renderCompare(); renderBench(); });
   const qs = questions(), m = systemMeans(qs);
-  $("#benchSub").innerHTML = `LLM du RAG : <code>${esc(state.results.llm || "—")}</code> · juge : <code>${esc(state.results.judge || "—")}</code>. ` +
-    `Moyennes sur les questions traitées par les deux systèmes (${m.n}/${qs.length}` + (m.scored < m.n ? `, dont ${m.scored} déjà notées` : "") + ").";
+  $("#benchSub").textContent = `Moyennes sur les ${m.n} questions de ce jeu traitées par les deux systèmes` +
+    (m.scored < m.n ? `, dont ${m.scored} déjà notées par le juge` : "") + `. Modèle : ${state.results.llm || "qwen2.5:7b"} ; juge : ${state.results.judge || "qwen2.5:14b"}.`;
   drawBars(m); fillDumbMetric(); drawDumbbell(); drawTable(m);
 }
 function axisY(svg, x0, x1, y, h0) {
   for (let t = 0; t <= 1.0001; t += 0.25) {
     const yy = y(t);
-    svg.append(s("line", { x1: x0, x2: x1, y1: yy, y2: yy, stroke: "#ebe9e2" }));
-    svg.append(s("text", { x: x0 - 8, y: yy + 4, "text-anchor": "end", "font-size": 11, fill: "#8a8983" }, t.toFixed(2).replace(".", ",")));
+    svg.append(s("line", { x1: x0, x2: x1, y1: yy, y2: yy, stroke: "#ececec" }));
+    svg.append(s("text", { x: x0 - 8, y: yy + 4, "text-anchor": "end", "font-size": 11, fill: "#8c8c8c" }, t.toFixed(2).replace(".", ",")));
   }
 }
 function drawBars(m) {
@@ -371,13 +394,13 @@ function drawBars(m) {
       p.addEventListener("mousemove", (e) => showTip(e, `<b>${SYS[sys].label}</b><br>${k === "avg" ? "Moyenne" : METRIC_LABEL[k]} : ${fmt(v)}`));
       p.addEventListener("mouseleave", hideTip);
       svg.append(p);
-      svg.append(s("text", { x: x + bw / 2, y: top - 5, "text-anchor": "middle", "font-size": 10.5, fill: "#52514e" }, fmt(v, 2)));
+      svg.append(s("text", { x: x + bw / 2, y: top - 5, "text-anchor": "middle", "font-size": 10.5, fill: "#5c5c5c" }, fmt(v, 2)));
     });
     const lbl = k === "avg" ? "Moyenne" : METRIC_LABEL[k];
-    lbl.split(" ").forEach((w, li) => svg.append(s("text", { x: cx, y: H - B + 16 + li * 13, "text-anchor": "middle", "font-size": 11.5, fill: "#52514e", "font-weight": k === "avg" ? 700 : 400 }, w)));
+    lbl.split(" ").forEach((w, li) => svg.append(s("text", { x: cx, y: H - B + 16 + li * 13, "text-anchor": "middle", "font-size": 11.5, fill: "#5c5c5c", "font-weight": k === "avg" ? 700 : 400 }, w)));
   });
-  svg.append(s("line", { x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "#cfccc3" }));
-  if (m.scored === 0) svg.append(s("text", { x: W / 2, y: H / 2, "text-anchor": "middle", fill: "#8a8983", "font-size": 14 }, "Notation RAGAS en cours de calcul…"));
+  svg.append(s("line", { x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "#9a9a9a" }));
+  if (m.scored === 0) svg.append(s("text", { x: W / 2, y: H / 2, "text-anchor": "middle", fill: "#8c8c8c", "font-size": 14 }, "Notes en cours de calcul"));
 }
 function fillDumbMetric() {
   const sel = $("#dumbMetric"); if (sel.options.length) return;
@@ -391,38 +414,38 @@ function drawDumbbell() {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   const x = (v) => L + v * (W - L - R);
   for (let t = 0; t <= 1.0001; t += 0.25) {
-    svg.append(s("line", { x1: x(t), x2: x(t), y1: T - 8, y2: H - 24, stroke: "#ebe9e2" }));
-    svg.append(s("text", { x: x(t), y: H - 8, "text-anchor": "middle", "font-size": 11, fill: "#8a8983" }, t.toFixed(2).replace(".", ",")));
+    svg.append(s("line", { x1: x(t), x2: x(t), y1: T - 8, y2: H - 24, stroke: "#ececec" }));
+    svg.append(s("text", { x: x(t), y: H - 8, "text-anchor": "middle", "font-size": 11, fill: "#8c8c8c" }, t.toFixed(2).replace(".", ",")));
   }
   qs.forEach((q, i) => {
     const yy = T + i * row + row / 2;
-    svg.append(s("text", { x: L - 10, y: yy + 4, "text-anchor": "end", "font-size": 11.5, fill: "#52514e" }, `Q${i + 1}`));
+    svg.append(s("text", { x: L - 10, y: yy + 4, "text-anchor": "end", "font-size": 11.5, fill: "#5c5c5c" }, `Q${i + 1}`));
     const b = q.systems.baseline?.scores[k], a = q.systems.agentic?.scores[k];
-    if (b != null && a != null) svg.append(s("line", { x1: x(b), x2: x(a), y1: yy, y2: yy, stroke: "#b8b5ab", "stroke-width": 2 }));
+    if (b != null && a != null) svg.append(s("line", { x1: x(b), x2: x(a), y1: yy, y2: yy, stroke: "#b9b9b9", "stroke-width": 2 }));
     for (const [sys, v] of [["baseline", b], ["agentic", a]]) {
       if (v == null) continue;
-      const c = s("circle", { cx: x(v), cy: yy, r: 6, fill: SYS[sys].hex, stroke: "#fcfcfb", "stroke-width": 2 });
+      const c = s("circle", { cx: x(v), cy: yy, r: 6, fill: SYS[sys].hex, stroke: "#ffffff", "stroke-width": 2 });
       svg.append(c);
     }
     const hit = s("rect", { x: 0, y: yy - row / 2, width: W, height: row, fill: "transparent" });
-    hit.addEventListener("mousemove", (e) => showTip(e, `<b>Q${i + 1}</b> ${esc(q.question)}<br>${METRIC_LABEL[k]} : RAG avancé ${fmt(b, 2)} · RAG agentique ${fmt(a, 2)}`));
+    hit.addEventListener("mousemove", (e) => showTip(e, `<b>Q${i + 1}</b> ${esc(q.question)}<br>${METRIC_LABEL[k]} : RAG classique ${fmt(b, 2)}, RAG agentique ${fmt(a, 2)}`));
     hit.addEventListener("mouseleave", hideTip);
-    hit.addEventListener("click", () => { state.q = i; renderCompare(); location.hash = "#comparateur"; });
+    hit.addEventListener("click", () => { state.q = i; renderCompare(); document.getElementById("comparateur").scrollIntoView(); });
     svg.append(hit);
   });
 }
 function drawTable(m) {
   const t = $("#benchTable");
-  const row = (label, b, a, d = 3, higher = true) => {
+  const row = (label, b, a, d = 3, higher = true, cls = "") => {
     const delta = a != null && b != null ? a - b : null;
-    const cls = delta == null || Math.abs(delta) < 1e-9 ? "" : (delta > 0) === higher ? "up" : "down";
-    return `<tr><td>${label}</td><td class="n">${fmt(b, d)}</td><td class="n">${fmt(a, d)}</td><td class="n delta ${cls}">${delta == null ? "—" : (delta > 0 ? "+" : "") + fmt(delta, d)}</td></tr>`;
+    const c = delta == null || Math.abs(delta) < 1e-9 ? "" : (delta > 0) === higher ? "up" : "down";
+    return `<tr class="${cls}"><td>${label}</td><td class="n">${fmt(b, d)}</td><td class="n">${fmt(a, d)}</td><td class="n ${c}">${delta == null ? "—" : (delta > 0 ? "+" : "−") + fmt(Math.abs(delta), d)}</td></tr>`;
   };
-  t.innerHTML = `<thead><tr><th>Métrique</th><th class="n">RAG avancé</th><th class="n">RAG agentique</th><th class="n">Δ</th></tr></thead><tbody>` +
+  t.innerHTML = `<thead><tr><th>Note</th><th class="n">RAG classique</th><th class="n">RAG agentique</th><th class="n">Écart</th></tr></thead><tbody>` +
     state.results.metrics.map((k) => row(METRIC_LABEL[k], m.baseline[k], m.agentic[k])).join("") +
-    row("<b>Moyenne des 4 métriques</b>", m.baseline.avg, m.agentic.avg) +
-    row("Articles attendus retrouvés", m.baseline.hit, m.agentic.hit, 2) +
-    row("Latence moyenne (s)", m.baseline.latency, m.agentic.latency, 0, false) + "</tbody>";
+    row("Moyenne des quatre notes", m.baseline.avg, m.agentic.avg, 3, true, "sep") +
+    row("Articles attendus retrouvés", m.baseline.hit, m.agentic.hit, 2, true, "sep") +
+    row("Temps de réponse moyen (s)", m.baseline.latency, m.agentic.latency, 0, false) + "</tbody>";
 }
 
 /* ── démarrage ───────────────────────────────────────────────── */
@@ -435,18 +458,12 @@ async function main() {
   if (!results.gold_sets[state.gold]) state.gold = Object.keys(results.gold_sets)[0];
   if (results.llm) $("#mLLM").textContent = results.llm;
   if (results.judge) $("#mJudge").textContent = results.judge;
-  renderKpis();
+  renderExample(); renderSummary();
   fillQuestionSelect($("#replayQ"), false);
   const firstAgentic = allQuestions().find((x) => x.q.systems.agentic);
   if (firstAgentic) $("#replayQ").value = `${firstAgentic.g}|${firstAgentic.i}`;
   $("#replayQ").onchange = () => renderTraceList(-1);
   $("#replayBtn").onclick = replay;
   renderGraph(); renderCompare(); renderMap(); renderBench();
-  // lien de navigation actif
-  const links = [...document.querySelectorAll(".topnav nav a")];
-  const obs = new IntersectionObserver((ents) => ents.forEach((e) => {
-    if (e.isIntersecting) links.forEach((l) => l.classList.toggle("active", l.getAttribute("href") === "#" + e.target.id));
-  }), { rootMargin: "-40% 0px -55% 0px" });
-  document.querySelectorAll("section.block").forEach((sec) => obs.observe(sec));
 }
-main().catch((e) => { document.body.insertAdjacentHTML("afterbegin", `<p style="padding:20px;color:#c0392b">Erreur de chargement des données : ${esc(e.message)}</p>`); });
+main().catch((e) => { document.body.insertAdjacentHTML("afterbegin", `<p style="padding:20px;color:#b3261e">Les données de la page n'ont pas pu être chargées (${esc(e.message)}). Rechargez la page.</p>`); });
