@@ -135,7 +135,7 @@
         <li><b>Même corpus, même index</b> : RGPD (UE 2016/679), 99 articles, chunks de 300 caractères dans ChromaDB, embeddings <code>paraphrase-multilingual-MiniLM-L12-v2</code>.</li>
         <li><b>Même LLM</b> pour les deux systèmes : <code id="mLLM">qwen2.5:7b</code> via Ollama, en local.</li>
         <li><b>Même premier jet</b> : le rédacteur agentique utilise le même prompt RGPD que la baseline ; l'écart vient de l'orchestration.</li>
-        <li><b>Même juge</b> : <code id="mJudge">qwen2.5:14b</code>, température 0, plus gros que le modèle évalué.</li>
+        <li><b>Même juge</b> pour les deux systèmes : <code id="mJudge">qwen2.5:7b</code>, température 0.</li>
         <li><b>Quatre métriques RAGAS</b> : faithfulness, answer relevancy, context precision, context recall.</li>
       </ol>
     </div>
@@ -143,7 +143,7 @@
       <h3 style="margin-top:0">Limites</h3>
       <ul>
         <li>10 + 10 questions : les écarts sur une question isolée sont bruités ; on lit les moyennes et les tendances.</li>
-        <li>Le juge est un LLM local de 14 milliards de paramètres : moins fiable qu'un grand modèle commercial, mais identique pour les deux systèmes.</li>
+        <li>Le juge est un LLM local de 7 milliards de paramètres, le même modèle que celui qui rédige les réponses (choisi pour tenir le temps de calcul sur processeur) : il peut être indulgent avec ses propres réponses et il est moins fiable qu'un grand modèle, mais il note les deux systèmes exactement de la même façon.</li>
         <li>Les outils de l'agent de recherche (BM25 hybride, reranker multilingue) améliorent aussi la recherche en eux-mêmes ; ils font partie de sa boîte à outils.</li>
         <li>Le RAG agentique est plus lent (6 à 9 appels au LLM par question contre 2).</li>
       </ul>

@@ -32,23 +32,25 @@ fait mieux qu'un RAG avancé linéaire.
 - **Corpus** : texte officiel du RGPD (EUR-Lex), 11 chapitres, 99 articles.
 - **Deux systèmes** : un RAG avancé (multi-query, parent/child, reranking) et un RAG
   agentique de 7 agents LangGraph (planification, correction CRAG, réflexion).
-- **100 % local** : LLM `qwen2.5:7b` et juge `qwen2.5:14b` via **Ollama**, aucune clé API.
+- **100 % local** : LLM `qwen2.5:7b` et juge RAGAS via **Ollama**, aucune clé API.
 - **Évaluation** : RAGAS sur 2 jeux de 10 questions, même LLM et même juge pour les deux systèmes.
 
 ## Résultats
 
 <!-- RESULTATS:START -->
-**Résultats intermédiaires** (calcul en cours sur le poste local, 5/10 questions
-traitées par les deux systèmes, notation RAGAS à venir) :
+LLM du RAG : `qwen2.5:7b` ; juge RAGAS : `qwen2.5:7b` (Ollama, local, température 0). Les notes RAGAS sont des moyennes sur les questions notées pour les deux systèmes.
 
-- **Articles attendus retrouvés** : 43 % pour le RAG avancé contre **83 %** pour le
-  RAG agentique (part des articles cités par la réponse de référence qui sont donnés au LLM).
-- Exemple : à « Quels sont les principes relatifs au traitement des données personnelles ? »,
-  la baseline répond avec l'article 6 (licéité) ; l'agentique, après une boucle CRAG
-  (le Grader juge le contexte insuffisant, le Rewriter reformule), récupère l'**article 5**
-  et cite les bons principes.
+**Jeu `gold_set`** (10 questions) — **résultats intermédiaires** : 0/10 questions notées pour les deux systèmes, calcul en cours.
 
-Le tableau RAGAS complet et les captures seront mis à jour à la fin du calcul.
+| | RAG avancé (baseline) | RAG agentique | Écart |
+|---|---|---|---|
+| Faithfulness | — | — | — |
+| Answer relevancy | — | — | — |
+| Context precision | — | — | — |
+| Context recall | — | — | — |
+| **Moyenne des 4 métriques** | **—** | **—** | **—** |
+| Articles attendus retrouvés | 0,52 | 0,77 | +0,25 |
+| Temps de réponse moyen (s) | 160 | 524 | — |
 <!-- RESULTATS:END -->
 
 ## Pourquoi un RAG agentique ? Diagnostic de la baseline
@@ -108,7 +110,7 @@ puis applique un repli déterministe. Détails : [`RAG_AGENTIQUE.md`](RAG_AGENTI
    (`paraphrase-multilingual-MiniLM-L12-v2`) pour les deux systèmes.
 2. **Même premier jet** : le Writer agentique utilise le prompt de la baseline ; l'écart
    mesure l'orchestration.
-3. **Même juge** : `qwen2.5:14b`, température 0, plus gros que le modèle évalué.
+3. **Même juge** pour les deux systèmes, température 0 (`qwen2.5:7b` ; `qwen2.5:14b` possible mais environ trois fois plus lent sur processeur).
 4. **4 métriques RAGAS** + une mesure objective sans LLM : la part des articles attendus
    (cités par la réponse de référence) effectivement retrouvés.
 5. Script **reprenable** (`evaluation/evaluation_comparative.py`) : générations et notes
@@ -145,7 +147,7 @@ Prérequis : Python 3.11+, [Ollama](https://ollama.com/download), Node 18+ (fron
 
 ```bash
 ollama pull qwen2.5:7b          # LLM du RAG
-ollama pull qwen2.5:14b         # juge RAGAS
+ollama pull qwen2.5:14b         # juge RAGAS plus fiable (optionnel, plus lent)
 python -m venv venv && venv\Scripts\activate
 pip install -r requirements.txt
 
@@ -158,7 +160,8 @@ python run.py                   # API → http://localhost:8000/docs
   `"mode": "adaptive"` (baseline).
 - Frontend : `cd rag-frontend && npm install && npm run dev`.
 - Évaluation : `python evaluation/evaluation_comparative.py --gold gold_set.json gold_set2.json`
-  (ou `scripts_windows\2_evaluer.bat`), puis `python scripts/export_site_data.py`.
+  (ou `scripts_windows\2b_evaluer_juge_rapide.bat`), puis `python scripts/export_site_data.py`
+  et `python scripts/maj_readme_resultats.py`.
 
 Configuration facultative dans `.env` : `LLM_MODEL`, `JUDGE_MODEL`, `LLM_PROVIDER`
 (`ollama` par défaut, `mistral` ou `google` avec clé API).
@@ -166,7 +169,7 @@ Configuration facultative dans `.env` : `LLM_MODEL`, `JUDGE_MODEL`, `LLM_PROVIDE
 ## Limites
 
 - 2 × 10 questions : un écart sur une question isolée est bruité ; on lit les moyennes.
-- Juge local de 14B : moins fiable qu'un grand modèle commercial, mais identique pour les deux systèmes.
+- Juge local de 7B, identique au modèle qui rédige : il peut être indulgent avec ses propres réponses et il est moins fiable qu'un grand modèle commercial, mais il note les deux systèmes exactement de la même façon.
 - Les outils du Researcher (BM25, reranker multilingue) améliorent aussi la recherche en eux-mêmes.
 - L'agentique coûte plus cher : 6 à 9 appels au LLM par question contre 2.
 - Le corpus se limite au texte du RGPD (pas de jurisprudence ni de lignes directrices CNIL).

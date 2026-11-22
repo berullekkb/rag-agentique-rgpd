@@ -1,0 +1,46 @@
+{
+ "_judge": "qwen2.5:7b",
+ "_llm": "qwen2.5:7b",
+ "baseline": {
+  "Quels sont les principes relatifs au traitement des données personnelles ?": {
+   "faithfulness": 0.9,
+   "answer_relevancy": 0.7375585679699782,
+   "llm_context_precision_with_reference": 0.0,
+   "context_recall": 0.0
+  },
+  "Qu'est-ce que le consentement au sens du RGPD ?": {
+   "faithfulness": 1.0,
+   "answer_relevancy": 0.8843946438977376,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 0.5
+  },
+  "Quels sont les droits de la personne concernée ?": {
+   "faithfulness": 0.2,
+   "answer_relevancy": 0.6914392511712095,
+   "llm_context_precision_with_reference": 0.0,
+   "context_recall": 0.0
+  },
+  "Quelles sont les obligations en cas de violation de données personnelles ?": {
+   "faithfulness": 0.5625,
+   "answer_relevancy": 0.5698216356213673,
+   "llm_context_precision_with_reference": 0.99999999995,
+   "context_recall": 1.0
+  },
+  "Quand une analyse d'impact relative à la protection des données est-elle obligatoire ?": {
+   "faithfulness": 0.6363636363636364,
+   "answer_relevancy": 0.8276600776351609,
+   "llm_context_precision_with_reference": 0.99999999995,
+   "context_recall": 1.0
+  },
+  "Quelles sont les bases légales possibles d'un traitement ?": {
+   "faithfulness": 0.5,
+   "answer_relevancy": 0.41695862314231996,
+   "llm_context_precision_with_reference": 0.8333333332916666,
+   "context_recall": 1.0
+  },
+  "Quand la désignation d'un délégué à la protection des données est-elle obligatoire ?": {
+   "faithfulness": 1.0,
+   "answer_relevancy": 0.8238312580111774
+  }
+ }
+}

@@ -96,6 +96,7 @@ class _Tee:
 
 
 sys.stdout = _Tee(sys.stdout, RESULTS / "run_log.txt")
+sys.stderr = _Tee(sys.stderr, RESULTS / "run_log.txt")   # les erreurs aussi
 
 
 def _keep_awake() -> None:
