@@ -38,9 +38,17 @@ fait mieux qu'un RAG avancé linéaire.
 ## Résultats
 
 <!-- RESULTATS:START -->
-L'évaluation complète tourne en local (≈ 3 min par question pour la baseline, ≈ 10 min
-pour l'agentique et ≈ 15 min de notation par réponse avec le juge 14B sur CPU). Le
-tableau et les captures sont mis à jour à la fin du calcul.
+**Résultats intermédiaires** (calcul en cours sur le poste local, 5/10 questions
+traitées par les deux systèmes, notation RAGAS à venir) :
+
+- **Articles attendus retrouvés** : 43 % pour le RAG avancé contre **83 %** pour le
+  RAG agentique (part des articles cités par la réponse de référence qui sont donnés au LLM).
+- Exemple : à « Quels sont les principes relatifs au traitement des données personnelles ? »,
+  la baseline répond avec l'article 6 (licéité) ; l'agentique, après une boucle CRAG
+  (le Grader juge le contexte insuffisant, le Rewriter reformule), récupère l'**article 5**
+  et cite les bons principes.
+
+Le tableau RAGAS complet et les captures seront mis à jour à la fin du calcul.
 <!-- RESULTATS:END -->
 
 ## Pourquoi un RAG agentique ? Diagnostic de la baseline
