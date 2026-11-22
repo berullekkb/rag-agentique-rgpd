@@ -94,7 +94,7 @@ function renderKpis() {
     kpi("…", "Notation RAGAS en cours de calcul");
     kpi(`${m.n}<small> / ${all.length}</small>`, "Questions traitées par les deux systèmes");
   }
-  kpi(`${Math.round((m.baseline.hit ?? 0) * 100)} % → ${Math.round((m.agentic.hit ?? 0) * 100)} %`, "Articles attendus retrouvés (baseline → agentique)");
+  kpi(`${Math.round((m.baseline.hit ?? 0) * 100)}\u00a0% → ${Math.round((m.agentic.hit ?? 0) * 100)}\u00a0%`, "Articles attendus retrouvés (baseline → agentique)");
   kpi(`×${m.baseline.latency ? (m.agentic.latency / m.baseline.latency).toFixed(1).replace(".", ",") : "—"}`, "Coût en temps de l'approche agentique");
 }
 
