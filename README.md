@@ -40,15 +40,15 @@ fait mieux qu'un RAG avancé linéaire.
 <!-- RESULTATS:START -->
 LLM du RAG : `qwen2.5:7b` ; juge RAGAS : `qwen2.5:7b` (Ollama, local, température 0). Les notes RAGAS sont des moyennes sur les questions notées pour les deux systèmes.
 
-**Jeu `gold_set`** (10 questions) — **résultats intermédiaires** : 0/10 questions notées pour les deux systèmes, calcul en cours.
+**Jeu `gold_set`** (10 questions) — **résultats intermédiaires** : 2/10 questions notées pour les deux systèmes, calcul en cours.
 
 | | RAG avancé (baseline) | RAG agentique | Écart |
 |---|---|---|---|
-| Faithfulness | — | — | — |
-| Answer relevancy | — | — | — |
-| Context precision | — | — | — |
-| Context recall | — | — | — |
-| **Moyenne des 4 métriques** | **—** | **—** | **—** |
+| Faithfulness | 0,950 | 0,944 | −0,006 |
+| Answer relevancy | 0,811 | 0,752 | −0,059 |
+| Context precision | 0,500 | 0,819 | +0,319 |
+| Context recall | 0,250 | 1,000 | +0,750 |
+| **Moyenne des 4 métriques** | **0,628** | **0,879** | **+0,251** |
 | Articles attendus retrouvés | 0,52 | 0,77 | +0,25 |
 | Temps de réponse moyen (s) | 160 | 524 | — |
 <!-- RESULTATS:END -->

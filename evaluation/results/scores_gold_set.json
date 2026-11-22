@@ -40,7 +40,41 @@
   },
   "Quand la désignation d'un délégué à la protection des données est-elle obligatoire ?": {
    "faithfulness": 1.0,
-   "answer_relevancy": 0.8238312580111774
+   "answer_relevancy": 0.8238312580111774,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 1.0
+  },
+  "À quelles conditions peut-on transférer des données hors de l'Union européenne ?": {
+   "faithfulness": 0.5,
+   "answer_relevancy": 0.6720600763370711,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 0.6666666666666666
+  },
+  "Quel est le montant maximal des amendes administratives prévues par le RGPD ?": {
+   "faithfulness": 1.0,
+   "answer_relevancy": 0.7479021530573423,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 1.0
+  },
+  "Quelle est la différence entre responsable de traitement et sous-traitant ?": {
+   "faithfulness": 0.6190476190476191,
+   "answer_relevancy": 0.3667024272324813,
+   "llm_context_precision_with_reference": 0.9999999999666667,
+   "context_recall": 1.0
+  }
+ },
+ "agentic": {
+  "Quels sont les principes relatifs au traitement des données personnelles ?": {
+   "faithfulness": 0.8888888888888888,
+   "answer_relevancy": 0.7587597330198536,
+   "llm_context_precision_with_reference": 0.9999999999,
+   "context_recall": 1.0
+  },
+  "Qu'est-ce que le consentement au sens du RGPD ?": {
+   "faithfulness": 1.0,
+   "answer_relevancy": 0.7456540371328545,
+   "llm_context_precision_with_reference": 0.6388888888675925,
+   "context_recall": 1.0
   }
  }
 }
